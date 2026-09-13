@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>WIM Online — Admin</title>
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<div class="app-shell">
+  <header class="app-header">
+    <div class="header-row">
+      <button class="back-btn" onclick="history.back()">←</button>
+      <h1>Admin</h1>
+      <span style="width:36px;"></span>
+    </div>
+    <div class="subtitle">WIM Online — Manajemen Data</div>
+  </header>
+
+  <div class="main-content">
+    <!-- Kelola Toko -->
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">🏪 Kelola Toko</div>
+          <div class="card-subtitle" id="storeCount">Memuat...</div>
+        </div>
+      </div>
+      <div id="storeAdminList"><div class="loading"><div class="spinner"></div></div></div>
+    </div>
+
+    <!-- Kelola Pengguna -->
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">👥 Kelola Pengguna</div>
+          <div class="card-subtitle" id="userCount">Memuat...</div>
+        </div>
+      </div>
+      <div id="userAdminList"><div class="loading"><div class="spinner"></div></div></div>
+    </div>
+
+    <!-- Pesanan Hari Ini -->
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">📋 Pesanan Hari Ini</div>
+          <div class="card-subtitle" id="orderCount">Memuat...</div>
+        </div>
+      </div>
+      <div id="orderAdminList"><div class="loading"><div class="spinner"></div></div></div>
+    </div>
+
+    <!-- Produk -->
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">📦 Produk</div>
+          <div class="card-subtitle" id="productCount">Memuat...</div>
+        </div>
+      </div>
+      <div id="productAdminList"><div class="loading"><div class="spinner"></div></div></div>
+    </div>
+  </div>
+
+  <nav class="bottom-nav">
+    <a href="dashboard.html">🏠Beranda</a>
+    <a href="visit-card.html">📋Kunjungan</a>
+    <a href="noo.html">➕NOO</a>
+    <a href="admin.html" class="active">⚙Admin</a>
+    <a href="report.html">📊Laporan</a>
+  </nav>
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/api.js"></script>
+<script src="js/app.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  Session.checkOrRedirect();
+  loadAdminData();
+});
+
+async function loadAdminData() {
+  try {
+    const results = await Promise.allSettled([
+      WIM_API.getPlaces(),
+      WIM_API.getContacts(),
+      WIM_API.getOrders(),
+      WIM_API.getEntities(),
+      WIM_API.getDrivers(),
+    ]);
+
+    const places = results[0].status === 'fulfilled' ? results[0].value : [];
+    const contacts = results[1].status === 'fulfilled' ? results[1].value : [];
+    const orders = results[2].status === 'fulfilled' ? results[2].value : [];
+    const entities = results[3].status === 'fulfilled' ? results[3].value : [];
+    const drivers = results[4].status === 'fulfilled' ? results[4].value : [];
+
+    const stores = places.filter(p => p.type === 'store' || !p.type);
+    renderStoreAdmin(stores);
+    renderUserAdmin(drivers, contacts);
+    renderOrderAdmin(orders);
+    renderProductAdmin(entities);
+
+    document.getElementById('storeCount').textContent = `${stores.length} toko`;
+    document.getElementById('userCount').textContent = `${(drivers?.length||0)+(contacts?.length||0)} pengguna`;
+    document.getElementById('orderCount').textContent = `${(orders?.length||0)} pesanan`;
+    document.getElementById('productCount').textContent = `${(entities?.length||0)} produk`;
+  } catch(e) {
+    console.error('Admin load error:', e);
+    document.getElementById('storeAdminList').innerHTML =
+      `<div class="alert alert-danger">Gagal memuat: ${e.message}</div>`;
+  }
+}
+
+function renderStoreAdmin(stores) {
+  const el = document.getElementById('storeAdminList');
+  if (!stores.length) { el.innerHTML = `<div class="empty-state"><p>Belum ada toko</p></div>`; return; }
+  el.innerHTML = stores.map(s => `<div class="store-item">
+    <div class="store-icon">${(s.name||'T').charAt(0)}</div>
+    <div class="store-info">
+      <div class="store-name">${s.name||'Tanpa Nama'}</div>
+      <div class="store-address">${s.city||''} ${s.street1||''}</div>
+    </div>
+    <div style="display:flex;gap:4px;flex-shrink:0;">
+      <button class="btn btn-sm btn-outline" onclick="alert('Edit toko')">✏️</button>
+      <button class="btn btn-sm btn-danger" onclick="alert('Hapus toko')">🗑️</button>
+    </div>
+  </div>`).join('');
+}
+
+function renderUserAdmin(drivers, contacts) {
+  const el = document.getElementById('userAdminList');
+  const combined = [
+    ...(drivers||[]).map(d => ({ name: 'Andi Sales (Driver)', phone: '628111111111', role: 'Driver' })),
+    ...(contacts||[]).map(c => ({ name: c.name||'', phone: c.phone||'', role: c.type||'Customer' }))
+  ];
+  if (!combined.length) { el.innerHTML = `<div class="empty-state"><p>Belum ada pengguna</p></div>`; return; }
+  el.innerHTML = combined.slice(0,10).map(u => `<div class="store-item">
+    <div class="store-icon" style="background:var(--green);">👤</div>
+    <div class="store-info">
+      <div class="store-name">${u.name}</div>
+      <div class="store-address">${u.phone} • <span class="badge badge-info">${u.role}</span></div>
+    </div>
+  </div>`).join('');
+}
+
+function renderOrderAdmin(orders) {
+  const el = document.getElementById('orderAdminList');
+  if (!orders.length) { el.innerHTML = `<div class="empty-state"><p>Belum ada pesanan</p></div>`; return; }
+  el.innerHTML = orders.slice(0,10).map(o => `<div class="store-item">
+    <div class="store-icon" style="background:var(--green);">📋</div>
+    <div class="store-info">
+      <div class="store-name">Pesanan ${o.public_id||'#'+o.id}</div>
+      <div class="store-address">
+        Status: <span class="badge ${o.status==='verified'?'badge-success':o.status==='pending'?'badge-warning':'badge-gray'}">${o.status}</span>
+      </div>
+    </div>
+    <div style="display:flex;gap:4px;flex-shrink:0;">
+      <button class="btn btn-sm btn-success" onclick="alert('Pesanan diterima')">✓</button>
+      <button class="btn btn-sm btn-danger" onclick="alert('Pesanan ditolak')">✗</button>
+    </div>
+  </div>`).join('');
+}
+
+function renderProductAdmin(entities) {
+  const el = document.getElementById('productAdminList');
+  if (!entities.length) { el.innerHTML = `<div class="empty-state"><p>Belum ada produk</p></div>`; return; }
+  el.innerHTML = entities.map(e => {
+    const meta = typeof e.meta === 'object' ? e.meta : {};
+    const brand = meta?.brand||'';
+    const price = e.price ? `Rp${e.price.toLocaleString('id-ID')}` : '-';
+    return `<div class="store-item">
+      <div class="store-icon" style="background:var(--tosca);">📦</div>
+      <div class="store-info">
+        <div class="store-name">${e.name}</div>
+        <div class="store-address">${e.sku||''} • ${price} • ${brand}</div>
+      </div>
+      <button class="btn btn-sm btn-outline" onclick="alert('Edit harga produk')">✏️</button>
+    </div>`;
+  }).join('');
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>WIM Online — Absensi</title>
+<link rel="stylesheet" href="css/app.css">
+<style>
+.camera-preview{width:100%;max-width:280px;height:180px;object-fit:cover;border-radius:10px;margin:8px auto;display:block;background:var(--gray-200);border:2px dashed var(--gray-300)}
+.camera-preview.has-photo{border:2px solid var(--green)}
+.photo-label{font-size:12px;color:var(--gray-400);text-align:center;margin-top:4px}
+.photo-btn{font-size:12px;padding:6px 12px;margin:4px auto;display:block}
+#photoModal .modal-body{text-align:center}
+#photoModal .modal-actions{gap:8px;margin-top:12px}
+</style>
+</head>
+<body>
+<div class="app-shell">
+  <header class="app-header">
+    <div class="header-row">
+      <button class="back-btn" onclick="history.back()">←</button>
+      <h1>Absensi</h1>
+      <span style="width:36px;"></span>
+    </div>
+    <div class="subtitle">WIM Online — Absensi Harian</div>
+  </header>
+
+  <div class="main-content">
+    <!-- Status Card -->
+    <div class="card" id="statusCard">
+      <div style="text-align:center;padding:20px 0;">
+        <div style="font-size:48px;margin-bottom:12px;" id="statusIcon">⏰</div>
+        <div class="card-title" id="statusTitle">Belum Absen</div>
+        <div class="card-subtitle" id="statusDesc">Memuat data...</div>
+        <div id="statusTime" style="font-size:13px;color:var(--gray-400);margin-top:8px;"></div>
+      </div>
+    </div>
+
+    <!-- Clock In Section -->
+    <div id="clockInSection" style="display:none;">
+      <div id="clockInPhotoPreview" style="display:none;">
+        <img id="clockInPhotoImg" class="camera-preview" alt="Foto Masuk">
+        <div class="photo-label">📸 Foto Masuk</div>
+      </div>
+      <button class="btn btn-success btn-lg btn-block" id="btnClockIn" onclick="clockIn()">
+        🟢 Mulai Kerja
+      </button>
+      <button class="btn btn-outline btn-block" id="btnRetakeClockIn" onclick="takePhoto('clockIn')" style="display:none;font-size:12px;padding:6px;">
+        📷 Ambil Foto Masuk
+      </button>
+    </div>
+
+    <div style="height:8px;"></div>
+
+    <!-- Clock Out Section -->
+    <div id="clockOutSection" style="display:none;">
+      <div id="clockOutPhotoPreview" style="display:none;">
+        <img id="clockOutPhotoImg" class="camera-preview" alt="Foto Pulang">
+        <div class="photo-label">📸 Foto Pulang</div>
+      </div>
+      <button class="btn btn-danger btn-lg btn-block" id="btnClockOut" onclick="clockOut()">
+        🔴 Selesai Kerja
+      </button>
+      <button class="btn btn-outline btn-block" id="btnRetakeClockOut" onclick="takePhoto('clockOut')" style="display:none;font-size:12px;padding:6px;">
+        📷 Ambil Foto Pulang
+      </button>
+    </div>
+
+    <div style="height:8px;"></div>
+    <button class="btn btn-outline btn-block" id="btnReset" onclick="resetAbsen()" style="display:none;">
+      🔄 Reset Absen Hari Ini
+    </button>
+
+    <!-- Riwayat Absensi -->
+    <div class="card" style="margin-top:16px;">
+      <div class="card-header">
+        <div class="card-title">📋 Riwayat Absensi Hari Ini</div>
+      </div>
+      <div id="historyList">
+        <div class="empty-state"><p>Belum ada riwayat absensi hari ini</p></div>
+      </div>
+    </div>
+  </div>
+
+  <nav class="bottom-nav">
+    <a href="dashboard.html" ><span class="nav-icon">🏠</span>Beranda</a>
+    <a href="absensi.html" class="active"><span class="nav-icon">⏰</span>Absensi</a>
+    <a href="visit-card.html" ><span class="nav-icon">📋</span>Kunjungan</a>
+    <a href="noo.html" ><span class="nav-icon">➕</span>NOO</a>
+    <a href="report.html" ><span class="nav-icon">📊</span>Laporan</a>
+  </nav>
+</div>
+
+<!-- Camera Modal — uses the phone's built-in camera app (front/selfie camera) via <input capture="user"> -->
+<div class="modal-overlay" id="photoModal" style="display:none;" onclick="if(event.target===this)closePhotoModal()">
+  <div class="modal" style="max-width:360px;">
+    <div class="modal-header">
+      <h3 id="photoModalTitle">Ambil Foto</h3>
+    </div>
+    <div class="modal-body">
+      <img id="photoResult" style="width:100%;max-width:300px;border-radius:10px;display:none;">
+      <div class="photo-label" id="cameraHint" style="display:none;">📷 Akan membuka kamera depan perangkat Anda</div>
+      <input type="file" id="photoFileInput" accept="image/*" capture="user" style="display:none;">
+      <div class="modal-actions" style="display:flex;gap:8px;margin-top:12px;justify-content:center;">
+        <button class="btn btn-success" id="btnUsePhoto" onclick="usePhoto()" style="display:none;">✅ Gunakan</button>
+        <button class="btn btn-outline" id="btnRetake" onclick="openNativeCamera()" style="display:none;">🔄 Ambil Ulang</button>
+        <button class="btn btn-outline" onclick="closePhotoModal()">Batal</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/api.js"></script>
+<script src="js/app.js"></script>
+<script>
+// ── ALL DATA FROM SERVER ONLY — no localStorage
+let pendingPhotoTarget = null;
+// In-memory absensi data, always refreshed from server
+let absenData = null;
+
+document.addEventListener('DOMContentLoaded', () => {
+  Session.checkOrRedirect();
+  loadServerAbsen();
+});
+
+// ── Server-side absensi (MySQL — no localStorage)
+async function loadServerAbsen() {
+  try {
+    const resp = await fetch(`/api/absensi?date=${new Date().toISOString().slice(0,10)}`, {
+      credentials: 'same-origin',
+      headers: { 'Accept': 'application/json' }
+    });
+    if (resp.ok) {
+      const data = await resp.json();
+      if (data && data.clockIn) {
+        absenData = {
+          id: data.id,
+          date: data.date,
+          clockIn: data.clockIn,
+          clockOut: data.clockOut,
+          clockInPhoto: data.clockInPhoto,
+          clockOutPhoto: data.clockOutPhoto,
+          duration: data.duration,
+          location: data.location || null,
+        };
+      } else {
+        absenData = null;
+      }
+    }
+  } catch (e) {
+    WIM_LOGGER && WIM_LOGGER.error('Absensi', 'loadServerAbsen failed', e.message);
+  }
+  renderAbsen();
+}
+
+async function sendAbsenToServer(action, fields) {
+  try {
+    const resp = await fetch('/api/absensi', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({ action, ...fields })
+    });
+    const result = await resp.json();
+    if (resp.ok) {
+      WIM_LOGGER && WIM_LOGGER.info('Absensi', `server ${action} ok`, result);
+    } else {
+      WIM_LOGGER && WIM_LOGGER.error('Absensi', `server ${action} failed`, result);
+    }
+    return resp.ok;
+  } catch (e) {
+    WIM_LOGGER && WIM_LOGGER.error('Absensi', `sendAbsenToServer (${action}) failed`, e.message);
+    return false;
+  }
+}
+
+function renderAbsen() {
+  const data = absenData;
+  const now = new Date();
+  const today = now.toISOString().slice(0,10);
+
+  if (data && String(data.date || '').slice(0,10) === today) {
+    document.getElementById('statusIcon').textContent = data.clockOut ? '✅' : '🕐';
+    document.getElementById('statusTitle').textContent = data.clockOut ? 'Selesai Kerja' : 'Sedang Bekerja';
+    document.getElementById('statusDesc').textContent = data.clockOut
+      ? `Selesai: ${data.clockOut}`
+      : `Mulai: ${data.clockIn}`;
+    document.getElementById('statusTime').textContent = data.clockOut
+      ? `Durasi: ${data.duration || '—'}`
+      : 'Belum absen pulang';
+
+    document.getElementById('btnClockIn').style.display = 'none';
+    document.getElementById('clockInSection').style.display = data.clockOut ? 'none' : 'block';
+    document.getElementById('clockOutSection').style.display = data.clockOut ? 'none' : 'block';
+    document.getElementById('btnReset').style.display = 'block';
+
+    // Show clock-in photo from server
+    if (data.clockInPhoto) {
+      document.getElementById('clockInPhotoPreview').style.display = 'block';
+      document.getElementById('clockInPhotoImg').src = data.clockInPhoto;
+      document.getElementById('clockInPhotoImg').classList.add('has-photo');
+    }
+    // Show clock-out photo from server
+    if (data.clockOutPhoto) {
+      document.getElementById('clockOutPhotoPreview').style.display = 'block';
+      document.getElementById('clockOutPhotoImg').src = data.clockOutPhoto;
+      document.getElementById('clockOutPhotoImg').classList.add('has-photo');
+    }
+  } else {
+    // No activity today
+    document.getElementById('statusIcon').textContent = '⏰';
+    document.getElementById('statusTitle').textContent = 'Belum Absen';
+    document.getElementById('statusDesc').textContent = 'Mulai hari kerja Anda';
+    document.getElementById('statusTime').textContent = '';
+    document.getElementById('clockInSection').style.display = 'block';
+    document.getElementById('clockOutSection').style.display = 'none';
+    document.getElementById('btnReset').style.display = 'none';
+    document.getElementById('clockInPhotoPreview').style.display = 'none';
+    document.getElementById('clockOutPhotoPreview').style.display = 'none';
+
+    document.getElementById('btnClockIn').style.display = 'block';
+    document.getElementById('btnRetakeClockIn').style.display = 'none';
+    document.getElementById('btnRetakeClockOut').style.display = 'none';
+  }
+  renderHistory(data);
+}
+
+// ── Compress image (JPEG 0.6 quality, 800px max)
+function compressImage(dataUrl, maxWidth = 800, quality = 0.6) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = function () {
+      let { width, height } = img;
+      if (width > maxWidth) {
+        height = Math.round(height * (maxWidth / width));
+        width = maxWidth;
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, width, height);
+      try {
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      } catch (e) {
+        resolve(dataUrl);
+      }
+    };
+    img.onerror = function () { resolve(dataUrl); };
+    img.src = dataUrl;
+  });
+}
+
+// ── Camera modal — uses the phone's built-in camera app (front/selfie camera).
+//    Native <input type="file" accept="image/*" capture="user"> is far more
+//    compatible than a custom getUserMedia live preview + shutter, which needs an
+//    HTTPS/localhost origin and picked the wrong (rear) camera on mobile.
+function takePhoto(target) {
+  pendingPhotoTarget = target;
+  document.getElementById('photoModal').style.display = 'flex';
+  document.getElementById('photoModalTitle').textContent = target === 'clockIn' ? 'Ambil Foto Masuk' : 'Ambil Foto Pulang';
+  document.getElementById('btnUsePhoto').style.display = 'none';
+  document.getElementById('btnRetake').style.display = 'none';
+  document.getElementById('photoResult').style.display = 'none';
+  openNativeCamera();
+}
+
+// Opens the device's native FRONT (selfie) camera app. Also used by "Ambil Ulang".
+function openNativeCamera() {
+  const hint = document.getElementById('cameraHint');
+  const fileInput = document.getElementById('photoFileInput');
+  fileInput.accept = 'image/*';
+  fileInput.capture = 'user'; // front camera — the attendance photo is a face selfie
+  hint.style.display = 'block';
+  fileInput.onchange = null;
+  fileInput.onchange = function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(ev) {
+      const dataUrl = ev.target.result;
+      document.getElementById('photoResult').src = dataUrl;
+      document.getElementById('photoResult').style.display = 'block';
+      hint.style.display = 'none';
+      document.getElementById('btnUsePhoto').style.display = 'inline-block';
+      document.getElementById('btnRetake').style.display = 'inline-block';
+      fileInput.value = '';
+    };
+    reader.readAsDataURL(file);
+  };
+  fileInput.click();
+}
+
+function usePhoto() {
+  const dataUrl = document.getElementById('photoResult').src;
+  if (!dataUrl || dataUrl === '') return;
+
+  compressImage(dataUrl).then(compressed => {
+    const target = pendingPhotoTarget; // 'clockIn' or 'clockOut'
+    closePhotoModal();
+
+    if (target === 'clockIn') {
+      clockInWithPhoto(compressed);
+    } else {
+      clockOutWithPhoto(compressed);
+    }
+  });
+}
+
+function closePhotoModal() {
+  document.getElementById('photoModal').style.display = 'none';
+  const fi = document.getElementById('photoFileInput');
+  fi.value = '';
+  fi.onchange = null;
+}
+
+// ── Clock In (no localStorage — data goes directly to server)
+function clockIn() {
+  // If already clocked in (from server), just show status
+  if (absenData && absenData.clockIn && !absenData.clockOut) {
+    showToast('info', 'Sedang bekerja', `Mulai ${absenData.clockIn}`);
+    return;
+  }
+  takePhoto('clockIn');
+}
+
+async function clockInWithPhoto(photo) {
+  const now = new Date();
+  const timeStr = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+  const dateStr = now.toISOString().slice(0,10);
+
+  document.getElementById('btnClockIn').disabled = true;
+  document.getElementById('btnClockIn').textContent = '⏳ Mengambil lokasi...';
+
+  const doClockIn = async (lat, lng) => {
+    const ok = await sendAbsenToServer('clock_in', {
+      date: dateStr, time: timeStr,
+      photo: photo,
+      lat: lat, lng: lng,
+    });
+    // Reload from server
+    await loadServerAbsen();
+    document.getElementById('btnClockIn').disabled = false;
+    document.getElementById('btnClockIn').textContent = '🟢 Mulai Kerja';
+    if (ok) {
+      showToast('success', '✅ Mulai Kerja', `Pukul ${timeStr}`);
+    } else {
+      showToast('error', 'Gagal', 'Gagal menyimpan absensi ke server');
+    }
+  };
+
+  if (navigator.geolocation) {
+    const gpsTimeout = setTimeout(() => { doClockIn(null, null); }, 3000);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => { clearTimeout(gpsTimeout); doClockIn(pos.coords.latitude, pos.coords.longitude); },
+      () => { clearTimeout(gpsTimeout); doClockIn(null, null); },
+      { enableHighAccuracy: false, timeout: 3000, maximumAge: 60000 }
+    );
+  } else {
+    doClockIn(null, null);
+  }
+}
+
+// ── Clock Out (no localStorage — data goes directly to server)
+function clockOut() {
+  if (!absenData || !absenData.clockIn) {
+    showToast('warning', 'Belum mulai kerja', 'Clock in dulu!');
+    return;
+  }
+  if (absenData.clockOut) {
+    showToast('info', 'Sudah selesai', `Selesai pukul ${absenData.clockOut}`);
+    return;
+  }
+  takePhoto('clockOut');
+}
+
+async function clockOutWithPhoto(photo) {
+  const now = new Date();
+  const timeStr = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+
+  // Calculate duration from server data
+  let duration = '';
+  if (absenData && absenData.clockIn) {
+    // Parse the clock-in time from DB. Stored in id-ID locale which may use "."
+    // or ":" as the hour/minute separator (e.g. "20.18"). Normalize both.
+    const parts = String(absenData.clockIn).split(/[:.]/).map(Number);
+    const h = parts[0] || 0, m = parts[1] || 0;
+    const startMin = h * 60 + m;
+    const endMin = now.getHours() * 60 + now.getMinutes();
+    const diffMin = Math.max(0, endMin - startMin);
+    const hours = Math.floor(diffMin / 60);
+    const mins = diffMin % 60;
+    duration = `${hours}j ${mins}m`;
+  }
+
+  document.getElementById('btnClockOut').disabled = true;
+  document.getElementById('btnClockOut').textContent = '⏳ Menyimpan...';
+
+  const ok = await sendAbsenToServer('clock_out', {
+    date: absenData ? absenData.date : now.toISOString().slice(0,10),
+    time: timeStr,
+    photo: photo,
+    duration: duration,
+    lat: null, lng: null,
+  });
+  // Reload from server
+  await loadServerAbsen();
+  document.getElementById('btnClockOut').disabled = false;
+  document.getElementById('btnClockOut').textContent = '🔴 Selesai Kerja';
+  if (ok) {
+    showToast('success', '✅ Selesai Kerja', `${timeStr} — ${duration}`);
+  } else {
+    showToast('error', 'Gagal', 'Gagal menyimpan absensi ke server');
+  }
+}
+
+function resetAbsen() {
+  if (!confirm('Reset absensi hari ini?')) return;
+  sendAbsenToServer('clock_in', { date: new Date().toISOString().slice(0,10), time: '' }).then(() => {
+    absenData = null;
+    renderAbsen();
+  });
+}
+
+function renderHistory(data) {
+  const el = document.getElementById('historyList');
+  const now = new Date();
+  const today = now.toISOString().slice(0,10);
+
+  const items = [];
+  if (data && String(data.date || '').slice(0,10) === today) {
+    if (data.clockIn) items.push({ type: 'Mulai Kerja', time: data.clockIn, icon: '🟢' });
+    if (data.clockInPhoto) items.push({ type: 'Foto Masuk', time: '📸 Lihat', icon: '📷', photo: data.clockInPhoto });
+    if (data.clockOut) items.push({ type: 'Selesai Kerja', time: data.clockOut, icon: '🔴' });
+    if (data.clockOutPhoto) items.push({ type: 'Foto Pulang', time: '📸 Lihat', icon: '📷', photo: data.clockOutPhoto });
+    if (data.location && data.location.lat) items.push({ type: 'Lokasi GPS', time: `${data.location.lat.toFixed(4)}, ${data.location.lng.toFixed(4)}`, icon: '📍' });
+    if (data.duration) items.push({ type: 'Total Durasi', time: data.duration, icon: '⏱️' });
+  }
+
+  if (items.length === 0) {
+    el.innerHTML = `<div class="empty-state"><p>Belum ada aktivitas hari ini</p></div>`;
+    return;
+  }
+
+  el.innerHTML = items.map(item => `
+    <div class="store-item" ${item.photo ? 'style="cursor:pointer;" onclick="viewPhoto(\'' + item.photo + '\')"' : ''}>
+      <div class="store-icon" style="background:var(--green);font-size:18px;">${item.icon}</div>
+      <div class="store-info">
+        <div class="store-name">${item.type}</div>
+        <div class="store-address">${item.time}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function viewPhoto(dataUrl) {
+  const w = window.open('', '_blank', 'width=400,height=600');
+  w.document.write(`<img src="${dataUrl}" style="width:100%;max-width:400px;display:block;margin:auto;">`);
+}
+
+// ── Toast notification
+function showToast(type, title, message) {
+  const container = document.querySelector('.toast-container') || (() => {
+    const c = document.createElement('div');
+    c.className = 'toast-container';
+    c.style.cssText = 'position:fixed;bottom:80px;left:16px;right:16px;z-index:9999;display:flex;flex-direction:column;gap:8px;pointer-events:none;';
+    document.body.appendChild(c);
+    return c;
+  })();
+  const colors = {success: '#28a745', error: '#dc3545', warning: '#e67e22', info: '#17a2b8'};
+  const icons = {success: '✅', error: '❌', warning: '⚠️', info: 'ℹ️'};
+  const toast = document.createElement('div');
+  toast.style.cssText = 'background:#fff;border-left:4px solid ' + (colors[type] || '#6c757d') + ';border-radius:8px;padding:12px 16px;box-shadow:0 4px 12px rgba(0,0,0,0.15);pointer-events:auto;max-width:400px;margin:0 auto;width:100%;';
+  toast.innerHTML = '<div style="font-weight:600;font-size:14px;margin-bottom:2px;">' + (icons[type] || '') + ' ' + title + '</div>' + (message ? '<div style="font-size:12px;color:var(--gray-400);">' + message + '</div>' : '');
+  container.appendChild(toast);
+  setTimeout(() => { if (toast.parentElement) toast.remove(); }, 4000);
+}
+</script>
+</body>
+</html>

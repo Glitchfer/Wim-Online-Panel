@@ -1,0 +1,149 @@
+{
+  "ringkasan": "Kritik keamanan/privacy terhadap POST-REVIEW-IMPLEMENTATION-PLAN.md, grounded pada kode serve.py (router do_GET/do_POST/do_PATCH) dan skema deploy/db/init/01-schema.sql. Temuan terbesar: RBAC server-side NYATA-nyata tidak konsisten — sebagian besar endpoint read bersifat 'any-authed-user', bukan role-scoped; regional_manager dan head_of_sales hilang dari ADMIN_ROLES sehingga scope-nya tidak berfungsi; dan wim_orders menyimpan items sebagai JSONB tanpa client-order-id (surft menghambat idempotensi offline queue).",
+  "temuan_kunci": [
+    "ADMIN_ROLES = ('super_admin','depo_admin','admin') di serve.py line 288 — head_of_sales dan regional_manager TIDAK termasuk, sehingga gate menulis (depots/products/promos/depot CRUD) menolak keduanya sementara gate membaca yang hanya memakai _require_auth() (validasinya hanya 'sesi valid, role apapun') justru membuka SEMUA data ke role terendah.",
+    "Endpoint read yang hanya cek sesi (TANPA cek role/scope): /api/stores/all, /api/positions/all (GPS live semua sales), /api/admin/route-map, /api/filter-options (list depo+region), /api/analytics/* (7 sub-endpoint: orders, recap, gallery, order-stock, packing, performance, store-orders), /api/orders, /api/orders/detail, /api/report, /api/absensi. Artinya member biasa (sales) dan API key bisa mencabut data lintas-depot, lokasi real-time semua rep (surveillance/privacy), dan pundi-pundi pendapatan.",
+    "do_ALL_STORES tidak punya scope filtering — semua depo tercampur.",
+    "wim_sync_queue.entity_id bertipe INTEGER dan do_SYNC_QUEUE_POST memaksa string jadi int, dengan fallback 0 (line 3342-3344). Order offline belum punya ID DB → entity_id=0 + tidak ada idempotency key → replay pembuat order ganda nyata.",
+    "wim_stores sudah menyimpan nik & npwp dalam kolom plaintext biasa; plan P5 menambahkannya tanpa rencana masking."
+  ],
+  "1_rbac_server_side": {
+    "status_saat_ini": [
+      "Lapisan auth pertama (_require_auth) hanya memvalidasi sesi/kunci — bukan peran/scope.",
+      "Penegakan role hanya ada di sebagian endpoint menulis (liat gate inline: role not in (...)), HEAD/GET read bermodal sesi saja.",
+      "Perbedaan besar antara gating menu HTML (cosmetic) dan gating API (sebagian besar terbuka)."
+    ],
+    "peran": {
+      "super_admin": "full semua depo/region + cabut semua resource.",
+      "head_of_sales": "baca semua, tulis terbatas (promo, export); tidak boleh menulis depo/stock adjust.",
+      "regional_manager": "hanya region sendiri (filter WHERE region_id / JOIN wim_depots.region_id).",
+      "depo_admin": "hanya depot sendiri.",
+      "sales": "hanya data dirinya sendiri.",
+      "warehouse": "hanya transisi status pengiriman (pending/verified/processed/shipped/delivered)."
+    },
+    "setiap_halaman_dan_cek_role": {
+      "P1_region_depo": {
+        "regions CRUD": "HANYA super_admin (region edit juga super_admin sesuai plan).",
+        "depots CRUD": "super_admin ONLY — jangan depo_admin (sekarang depo_admin di ADMIN_ROLES bisa), depo menentukan scope semua orang.",
+        "regional_manager": "baca region sendiri (filter join region_id) — saat ini malah diblokir oleh ADMIN_ROLES jadi tidak berfungsi (bug scope).",
+        "head_of_sales": "baca semua region, read-only."
+      },
+      "P2_invoice_ar_payment": {
+        "invoice/AR read": "head_of_sales (read-only qc region), regional_manager (region), super_admin (full). NOT depo_admin otomatis.",
+        "payment POST/collect & status paid/unpaid": "permission tersendiri 'can_manage_payment' atau finance role — JANGAN semua depo_admin.",
+        "margin/tax/bayar field": "hanya role finance/super_admin; sembunyikan dari order detail umum."
+      },
+      "P3_delivery_vehicle_surat_jalan": {
+        "transisi status surat jalan": "warehouse + depo_admin (depot sendiri).",
+        "vehicle CRUD (wim_vehicle)": "super_admin only.",
+        "regional_manager": "view pengiriman region sendiri.",
+        "tulis nilai pengiriman (shipped/delivered)": "perlu guard kepemilikan depot order."
+      },
+      "P4_stock_onhand_adjustment": {
+        "stock balance adjust": "depo_admin (depot sendiri) dengan Wajib audit (changed_by, qty, before/after) — jangan sales.",
+        "regional_manager/super_admin": "read; super_admin bisa full adjust.",
+        "seeding dari wim_stock_check": "perlu satu-tokoh sumber, bukan race adjust."
+      },
+      "P5_store_master_enriched": {
+        "store CRUD": "depo_admin/regional_manager scoped depot/region.",
+        "NPWP/NIK/contact": "tidak terbuka di list; masking (lihat bagian 2).",
+        "import": "gated role + audit baris."
+      }
+    },
+    "implementasi": [
+      "Tambah pemercepat _require_admin_scope(user, required_role_or_permission) yang mengembalikan (role, scope) dan SUNAT query setiap endpoint admin dengan injeksi WHERE (depot_id IN (...) / region join).",
+      "Kebijakan default-deny di router: setiap /api/admin/* dan /api/analytics/* wajib cek role+scope; jika belum terdaftar pivot → 403 (bukan diteruskan ke handler).",
+      "Kunci penegakan di sisi API/handler, bukan di HTML/admin.html.",
+      "Regional_manager: perbaiki agar masuk gate yang relevan (scope ke region) tanpa jadi super_admin."
+    ]
+  },
+  "2_personal_data_surface": {
+    "resiko": [
+      "wim_stores berisi nik, npwp, npwp_name, phone, alamat lengkap (kecamatan/kelurahan/kode_pos), owner_name — PII pajak/penduduk.",
+      "wim_user_meta juga berisi nik, npwp, alamat rep.",
+      "wim_store_photos.photo_data base64 penuh (visits selfie+GSP) — dikeluarkan via /api/analytics/gallery yang hanya cek sesi (data growharge + status metadata dinilai).",
+      "wim_positions — lokasi live (surveillance) — endpoint /api/positions/all hanya _require_auth()."
+    ],
+    "minimal_field_store_master": [
+      "name, kode, alamat (provinsi/kota/kecamatan/kelurahan/kode_pos), phone, owner_name, channel, category, region_id, assigned_sales_user_id, status.",
+      "KRITIKAL: NPWP & NIK TIDAK dimasukkan ke list/analytics/export. Simpan nilai sensitif terpisah/terenkripsi atau hapus dari baris umum.",
+      "Dedup pakai nama+phone dan hash NPWP (bukan NPWP mentah)."
+    ],
+    "masking_npwp_nik": {
+      "rekomendasi": "MASKING wajib (P0).",
+      "cara": [
+        "Tampilkan hanya karakter terakhir (mis. NPWP `***.***.6xx.xxx-000.000`, NIK `********xxxx`).",
+        "Nilai mentah hanya via endpoint detail khusus, role super_admin/finance, dengan audit (siapa, IP, kapan).",
+        "List/export: return masked + field validasi; JANGAN pernah kirim mentah ke admin list/analytics.",
+        "Ideal: simpan hash untuk lookup, nilai mentah disimpan terpisah/di-encrypt; atau hapus NPWP dari wim_stores dan taruh di tabel store_docs dengan akses ketat."
+      ]
+    },
+    "gallery_foto": {
+      "list": "metadata-only (sudah plan) — juga JANGAN kirim base64 ke role selain yang punya visit.",
+      "gating": "/api/analytics/gallery harus scope-cuasi (depot/region) — sekarang terbuka.",
+      "cap": "batas ukuran upload (kuota) + simpan ke object storage, bukan DB."
+    },
+    "lokasi_gps": [
+      "Perlakukan wim_positions (tracking GPS live) sebagai data sensitif pengawasan: hanya super_admin/head_of_sales (read) dan depo_admin untuk rep depotnya sendiri; bukan semua sesi."
+    ],
+    "privacy_normatif": [
+      "NPWP/NIK/alamat = data pribadi warga (UU PDP di Indonesia relevan di negara mereka). Prinsip least-privilege + data minimization; minimalisasi field di atas adalah langkah ke sana.",
+      "Ekspor data yang menyertakan NPWP/NIK/alamat penuh harus log audit + rate limit + restriksi role."
+    ]
+  },
+  "3_offline_queue_idempotency": {
+    "resiko_replay": [
+      "Tidak ada kunci idempotensi / client-request-id; dua klik replay → dua order (order berdiri karena items di JSONB + tanpa UNIQUE customer/order eksternal).",
+      "wim_sync_queue.entity_id INTEGER + do_SYNC_QUEUE_POST melempar string→int dgn fallback 0 jika order belum punya id DB: entity_id=0, tidak enable dedupe sama sekali.",
+      "Status transisi (ORDER_STATUS_POST) tidak idempoten: replay 'shipped' bisa double-log atau menimpa state; outbound ke Fleetbase tanpa guard double-sync."
+    ],
+    "cara_idempotan": [
+      "client: ORDER memuat client_request_id UUID (di-generate sekali per aksi logika, bukan per retry).",
+      "DB: wim_orders tambah kolom client_order_uuid UUID UNIQUE (atau repurpose uuid); INSERT ... ON CONFLICT (client_order_uuid) DO NOTHING; jika konflik → query & kembalikan order existing (200) — bukan 500/duplicate.",
+      "Queue: unique constraint (client_request_id) di wim_offline_queue/wim_sync_queue; insert conflict → kembalikan queue_id existing.",
+      "Status life cycle: loop pada (order_id, to_status) dengan guard 'hanya transisi maju' / row-lock; replay status yang sama di-ignore (return OK).",
+      "Outbound Fleetbase: bisa flag synced_to_fleetbase + UNIQUE(external_ref) di wim_sync_log agar tidak double ship.",
+      "Sinkronisasi: pakai queue row status pending→done atomically (UPDATE ... WHERE status='pending' RETURNING); hanya worker yang menang mengeksekusi.",
+      "Fix bug parsing entity_id: jangan fallback 0; validasi tipe & reject (400) bila tidak dapat diparse."
+    ]
+  },
+  "4_resiko_payment_invoice_pada_semua_admin": {
+    "ya_berisiko": [
+      "wim_invoice (nominal, pajak, margin) + wim_payment (amount_paid, paid_at, collector) = data finansial sensitif.",
+      "Jika dibuka ke semua depo_admin: kebocoran total pendapatan, margin, dan penagihan antar-depo; juga peluang manipulasi status paid tanpa kontrol sedang.",
+      "orders page saat ini menampilkan payment_method ke admin dasar — baseline exposure yang sekarang."
+    ],
+    "rekomendasi": [
+      "Permission khusus 'finance_view'/'can_manage_payment' terpisah dari 'admin'. Piranti: depo_admin hanya melihat AR depotnya sendiri; head_of_sales read-only; super_admin full.",
+      "JANGAN masukkan invoice/payment ke dashboard umum; halaman invoices.html harus gated + scope filter.",
+      "Export invoice/payment: butuh can_export + rate-limit ketat + audit (export_records).",
+      "Semua perubahan status payment wajib audit log (siapa, IP, before/after, alasan).",
+      "Jangan pernah expose margin/nominal pajak di order detail yang dijangkau sales/non-finance.",
+      "Pisahkan billing sensitive: simpan amount di satu tabel terproteksi, jangan tambal ke wim_orders.items JSONB yang sudah menyimpan payment_method meter."
+    ]
+  },
+  "rekomendasi_prioritas": {
+    "P0_critical": [
+      "1) Implementasi _require_admin_scope() + default-deny router: setiap /api/admin/* dan /api/analytics/* wajib cek role & scope; sedangkan /api/positions/all, /api/stores/all, /api/admin/route-map, /api/filter-options, /api/analytics/gallery kini bocor ke sesi biasa.",
+      "2) Tutup exposure live-GPS (/api/positions/all) dan gallery hanya untuk role dengan scope.",
+      "3) Mask NPWP/NIK di semua list/export; nilai mentah hanya lewat endpoint detail super_admin/finance + audit.",
+      "4) Fix bug wim_sync_queue.entity_id fallback 0 + tambah client_request_id & ON CONFLICT untuk idempotensi order.",
+      "5) Invoice/payment terpisah permission finance; jangan semua admin."
+    ],
+    "P1_importanter": [
+      "6) Scope filter WHERE pada setiap query admin (depot_id IN / region join) — do_ALL_STORES & analytics sekarang all-depot.",
+      "7) P1 region/depo CRUD hanya super_admin; perbaiki regional_manager (hilang dari ADMIN_ROLES).",
+      "8) Stock adjust transaksional + audit (changed_by, before/after) dan tidak untuk sales.",
+      "9) Warehouse gate status; gating surat jalan & vehicle CRUD."
+    ],
+    "P2_improvement": [
+      "10) Endpoint export rate-limit + audit (sudah di dokumen keamanan, wajib ikut serta).",
+      "11) Penyimpanan foto object-storage + metadata-only; cap upload.",
+      "12) Tambah revisi session/CSRF untuk POST/PATCH admin (SameSite=Lax cookies + Origin check)."
+    ]
+  },
+  "catatan_kebijakan": [
+    "Perangkat minimalisasi data & least-privilege ini sejalan dengan prinsip UU PDP (Indonesia) atas NPWP/NIK/alamat sebagai data pribadi.",
+    "Jangan andalkan menu-hiding sebagai kontrol; server adalah satu-satunya enforcement."
+  ]
+}

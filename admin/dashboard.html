@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WIM Admin — Dashboard</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f0f2f5;color:#1a1a2e;font-size:14px}
+
+/* Nav */
+.topnav{background:#1a1a2e;color:#fff;padding:0 24px;display:flex;align-items:center;height:56px;position:sticky;top:0;z-index:100}
+.topnav .brand{font-weight:700;font-size:16px;margin-right:32px}
+.topnav .brand span{color:#8e8ea0;font-weight:400}
+.topnav nav{display:flex;gap:4px;flex:1}
+.topnav nav a{color:#b0b0c8;text-decoration:none;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:500;transition:all .15s}
+.topnav nav a:hover{color:#fff;background:rgba(255,255,255,.08)}
+.topnav nav a.active{color:#fff;background:#4361ee}
+.topnav .user-info{font-size:12px;color:#8e8ea0;display:flex;align-items:center;gap:8px}
+.topnav .user-info .role-badge{background:#4361ee;padding:2px 8px;border-radius:6px;font-size:11px;color:#fff}
+.topnav .logout{color:#e63946;cursor:pointer;font-size:12px;margin-left:12px;text-decoration:none}
+
+/* Layout */
+.container{max-width:1280px;margin:0 auto;padding:24px}
+.page-title{font-size:20px;font-weight:700;margin-bottom:20px}
+.page-title .sub{font-size:13px;color:#8e8ea0;font-weight:400}
+
+/* KPI Cards */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:24px}
+.kpi-card{background:#fff;border-radius:12px;padding:18px 20px;box-shadow:0 1px 4px rgba(0,0,0,.04)}
+.kpi-card .kpi-label{font-size:12px;color:#8e8ea0;font-weight:500;text-transform:uppercase;letter-spacing:.3px}
+.kpi-card .kpi-value{font-size:32px;font-weight:700;margin:4px 0;line-height:1.1}
+.kpi-card .kpi-unit{font-size:12px;color:#6c6c80}
+.kpi-card .kpi-sub{font-size:11px;color:#8e8ea0;margin-top:2px}
+
+/* Content grid */
+.content-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:24px}
+@media(max-width:900px){.content-row{grid-template-columns:1fr}}
+
+/* Card */
+.card{background:#fff;border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,.04);overflow:hidden;margin-bottom:20px}
+.card-header{padding:16px 20px;border-bottom:1px solid #f0f2f5;display:flex;justify-content:space-between;align-items:center}
+.card-header h3{font-size:15px;font-weight:600}
+.card-body{padding:0;overflow-x:auto}
+.card-footer{padding:12px 20px;border-top:1px solid #f0f2f5;font-size:12px;color:#8e8ea0;text-align:right}
+
+/* Tables */
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{padding:10px 14px;text-align:left;font-weight:600;color:#6c6c80;font-size:11px;text-transform:uppercase;letter-spacing:.5px;background:#fafbfc;border-bottom:1px solid #eef0f4}
+td{padding:10px 14px;border-bottom:1px solid #f0f2f5}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#f8f9fc}
+
+/* Status badges */
+.status-badge{display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600}
+.status-ok{background:#d4f5e2;color:#0a7c42}
+.status-warn{background:#fff3cd;color:#856404}
+.status-miss{background:#fde8e8;color:#c0392b}
+.status-info{background:#e8f0fe;color:#4361ee}
+
+/* Loading/error */
+.loading{text-align:center;padding:40px;color:#8e8ea0}
+.error-bar{background:#fde8e8;color:#c0392b;padding:12px 20px;border-radius:8px;margin-bottom:16px;font-size:13px;display:none}
+</style>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+</head>
+<body data-page="dashboard">
+<div id="appHeader"></div>
+<div class="container">
+  <div class="error-bar" id="errorBar"></div>
+
+  <div class="page-title">
+    Dashboard <span class="sub" id="todayDate"></span>
+  </div>
+
+  <!-- KPI Cards -->
+  <div class="kpi-grid" id="kpiGrid">
+    <div class="kpi-card"><div class="kpi-label">👥 Total Tim</div><div class="kpi-value" id="kpiStaff">-</div><div class="kpi-unit">anggota</div></div>
+    <div class="kpi-card"><div class="kpi-label">✅ Hadir Hari Ini</div><div class="kpi-value" id="kpiAttended">-</div><div class="kpi-unit">dari total tim</div></div>
+    <div class="kpi-card"><div class="kpi-label">📍 Kunjungan Hari Ini</div><div class="kpi-value" id="kpiVisits">-</div><div class="kpi-unit">kunjungan</div></div>
+    <div class="kpi-card"><div class="kpi-label">📦 Pesanan Hari Ini</div><div class="kpi-value" id="kpiOrders">-</div><div class="kpi-unit">order</div></div>
+    <div class="kpi-card"><div class="kpi-label">🏭 Geofence Compliance</div><div class="kpi-value" id="kpiGeofence">-</div><div class="kpi-unit">% check-in di depo</div></div>
+    <div class="kpi-card"><div class="kpi-label">📋 Rencana vs Realisasi</div><div class="kpi-value" id="kpiCompletion">-</div><div class="kpi-unit">% toko dikunjungi</div></div>
+    <div class="kpi-card"><div class="kpi-label">🎯 EC (Effective Call)</div><div class="kpi-value" id="kpiEc">-</div><div class="kpi-unit">pesanan / kunjungan</div></div>
+  </div>
+
+  <!-- Two-column: Today's Plan + Recent Visits -->
+  <div class="content-row">
+    <div class="card">
+      <div class="card-header"><h3>📋 Rencana Kunjungan Hari Ini</h3></div>
+      <div class="card-body">
+        <div class="loading" id="planLoading">Memuat...</div>
+        <table id="planTable" style="display:none">
+          <thead><tr><th>Sales</th><th>Toko</th><th>Status</th></tr></thead>
+          <tbody id="planBody"></tbody>
+        </table>
+      </div>
+      <div class="card-footer"><span id="planCount">0</span> rencana</div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><h3>🕐 Kunjungan Terakhir</h3></div>
+      <div class="card-body">
+        <div class="loading" id="visitLoading">Memuat...</div>
+        <table id="visitTable" style="display:none">
+          <thead><tr><th>Sales</th><th>Toko</th><th>Check-in</th><th>Durasi</th></tr></thead>
+          <tbody id="visitBody"></tbody>
+        </table>
+      </div>
+      <div class="card-footer"><a href="visits.html">Lihat semua →</a></div>
+    </div>
+  </div>
+
+  <!-- Team status table -->
+  <div class="card">
+    <div class="card-header"><h3>👥 Status Tim Hari Ini</h3></div>
+    <div class="card-body">
+      <div class="loading" id="teamLoading">Memuat...</div>
+      <table id="teamTable" style="display:none">
+        <thead><tr><th>Nama</th><th>Depo</th><th>Absensi</th><th>Geofence</th><th>Kunjungan</th></tr></thead>
+        <tbody id="teamBody"></tbody>
+      </table>
+    </div>
+    <div class="card-footer"><a href="team.html">Lihat detail →</a></div>
+  </div>
+
+  <!-- Current sales positions (from wim_sales_positions) -->
+  <div class="card">
+    <div class="card-header"><h3>📍 Lokasi Sales (Posisi Terakhir)</h3>
+      <span style="font-size:12px;color:#8e8ea0">dari posisi app sales</span>
+    </div>
+    <div class="card-body" style="padding:16px 20px">
+      <div id="posLoading" class="loading">Memuat posisi...</div>
+      <div id="posMapWrap" style="display:none;margin-bottom:16px;height:340px;border-radius:12px;overflow:hidden">
+        <div id="posMap" style="height:340px"></div>
+      </div>
+      <table id="posTable" style="display:none;width:100%;border-collapse:collapse;font-size:13px">
+        <thead><tr style="background:#f5f7fa;color:#6c6c80"><th style="text-align:left;padding:9px 12px">Sales</th><th style="text-align:left;padding:9px 12px">Lokasi</th><th style="text-align:left;padding:9px 12px">Hari Terakhir Online</th></tr></thead>
+        <tbody id="posBody"></tbody>
+      </table>
+      <div id="posEmpty" style="display:none;text-align:center;padding:40px;color:#8e8ea0">Belum ada posisi sales. Sales bini membuka app.</div>
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const ADMIN_KEY = 'wim_admin_token';
+function getToken() { return localStorage.getItem(ADMIN_KEY); }
+
+document.getElementById('todayDate').textContent = new Date().toLocaleDateString('id-ID', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+
+// Restore user info from session
+try {
+  const u = JSON.parse(sessionStorage.getItem('admin_user') || '{}');
+  if(document.getElementById('userName'))document.getElementById('userName').textContent= u.name || '-';
+  if(document.getElementById('userRole'))document.getElementById('userRole').textContent= u.role || '-';
+} catch(e) {}
+
+async function api(path) {
+  const r = await fetch(path, { credentials:'same-origin', headers:{'Accept':'application/json'} });
+  if (r.status === 401) { logout(); throw new Error('Session expired'); }
+  const d = await r.json();
+  if (!r.ok) throw new Error(d.error || 'API error');
+  return d;
+}
+
+function logout() { localStorage.removeItem(ADMIN_KEY); sessionStorage.removeItem('admin_user'); fetch('/api/admin/logout', {method:'POST',credentials:'same-origin'}).catch(()=>{}); location.href='index.html'; }
+
+// ── Load Dashboard KPIs
+async function loadDashboard() {
+  try {
+    const d = await api('/api/admin/dashboard');
+    document.getElementById('kpiStaff').textContent = d.totalStaff;
+    document.getElementById('kpiAttended').textContent = d.attendedToday;
+    document.getElementById('kpiVisits').textContent = d.visitsToday;
+    document.getElementById('kpiOrders').textContent = d.ordersToday;
+    document.getElementById('kpiGeofence').textContent = d.geofenceCompliancePct + '%';
+    document.getElementById('kpiCompletion').textContent = d.completionPct + '%';
+    const ec = (d.visitsToday > 0) ? Math.round(100 * d.ordersToday / d.visitsToday) : 0;
+    document.getElementById('kpiEc').textContent = ec + '%';
+  } catch(e) {
+    document.getElementById('errorBar').textContent = 'Gagal memuat KPI: ' + e.message;
+    document.getElementById('errorBar').style.display = 'block';
+  }
+}
+
+// ── Load Today's Plan
+async function loadPlan() {
+  try {
+    const d = await api('/api/admin/today-plan');
+    document.getElementById('planCount').textContent = d.total;
+    const tb = document.getElementById('planBody');
+    if (d.plans.length === 0) { tb.innerHTML = '<tr><td colspan="3" style="text-align:center;padding:20px;color:#8e8ea0">Tidak ada rencana hari ini</td></tr>'; }
+    else {
+      tb.innerHTML = d.plans.map(p => `<tr>
+        <td>${p.userName}</td>
+        <td>${p.storeName} <span style="font-size:11px;color:#8e8ea0">${p.source === 'luar_rute' ? '📍LR' : '📍'}</span></td>
+        <td><span class="status-badge ${p.status === 'visited' ? 'status-ok' : 'status-info'}">${p.status === 'visited' ? '✅' : '⏳'}</span></td>
+      </tr>`).join('');
+    }
+    document.getElementById('planLoading').style.display = 'none';
+    document.getElementById('planTable').style.display = '';
+  } catch(e) {
+    document.getElementById('planLoading').textContent = 'Gagal: ' + e.message;
+  }
+}
+
+// ── Load Recent Visits
+async function loadVisits() {
+  try {
+    const d = await api('/api/admin/visits');
+    const tb = document.getElementById('visitBody');
+    if (d.visits.length === 0) { tb.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:#8e8ea0">Belum ada kunjungan</td></tr>'; }
+    else {
+      tb.innerHTML = d.visits.slice(0, 8).map(v => {
+        const dur = v.duration ? Math.round(v.duration / 60) + 'm' : '-';
+        return `<tr>
+          <td>${v.userName}</td>
+          <td>${v.storeName}</td>
+          <td>${v.checkinAt ? new Date(v.checkinAt).toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'}) : '-'}</td>
+          <td>${dur}</td>
+        </tr>`;
+      }).join('');
+    }
+    document.getElementById('visitLoading').style.display = 'none';
+    document.getElementById('visitTable').style.display = '';
+  } catch(e) {
+    document.getElementById('visitLoading').textContent = 'Gagal: ' + e.message;
+  }
+}
+
+// ── Load Team Status
+async function loadTeam() {
+  try {
+    const d = await api('/api/admin/team');
+    const tb = document.getElementById('teamBody');
+    if (d.members.length === 0) { tb.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:#8e8ea0">Tidak ada anggota tim</td></tr>'; }
+    else {
+      tb.innerHTML = d.members.map(m => {
+        const attStatus = m.clockIn ? (m.clockOut ? '✅ Hadir' : '🕐 Masuk') : '❌';
+        const gfBadge = m.geofenceStatus === 'in_depot' ? '<span class="status-badge status-ok">🏭 Depo</span>' : (m.geofenceStatus === 'outside' ? '<span class="status-badge status-warn">📍 Luar</span>' : '<span class="status-badge status-info">-</span>');
+        return `<tr>
+          <td><b>${m.name}</b><br><span style="font-size:11px;color:#8e8ea0">${m.email}</span></td>
+          <td>${m.depot || '-'}</td>
+          <td>${attStatus}</td>
+          <td>${gfBadge}</td>
+          <td>${m.visitsToday}k</td>
+        </tr>`;
+      }).join('');
+    }
+    document.getElementById('teamLoading').style.display = 'none';
+    document.getElementById('teamTable').style.display = '';
+  } catch(e) {
+    document.getElementById('teamLoading').textContent = 'Gagal: ' + e.message;
+  }
+}
+
+// ── Current sales positions (map dots + last-online table)
+let posMap = null;
+function formatLastSeen(ts) {
+  if (!ts) return '—';
+  const d = new Date(String(ts).replace(' ', 'T'));
+  if (isNaN(d.getTime())) return ts;
+  const mins = Math.floor((Date.now() - d.getTime()) / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return mins + 'm lalu';
+  if (mins < 1440) return Math.floor(mins / 60) + 'h lalu';
+  return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+}
+async function loadPositions() {
+  try {
+    const d = await api('/api/admin/positions/all');
+    const positions = d.positions || [];
+    const el = document.getElementById('posLoading');
+    el.style.display = 'none';
+    if (!positions.length) {
+      document.getElementById('posEmpty').style.display = 'block';
+      return;
+    }
+    // Table of last-known position per sales
+    const tb = document.getElementById('posBody');
+    tb.innerHTML = positions.map(p => `<tr>
+      <td><b>${esc(p.userName)}</b></td>
+      <td>${p.latitude != null && p.longitude != null ? p.latitude.toFixed(4) + ', ' + p.longitude.toFixed(4) : '—'}</td>
+      <td>${esc(formatLastSeen(p.recordedAt))}</td>
+    </tr>`).join('');
+    document.getElementById('posTable').style.display = '';
+    // Map with a dot per sales (current position)
+    document.getElementById('posMapWrap').style.display = '';
+    const mapEl = document.getElementById('posMap');
+    if (mapEl && typeof L !== 'undefined') {
+      if (posMap) { L.map().remove; posMap = null; }
+      const withPos = positions.filter(p => p.latitude != null && p.longitude != null);
+      if (!withPos.length) { document.getElementById('posMapWrap').style.display = 'none'; return; }
+      posMap = L.map('posMap', { zoomControl: true }).setView([withPos[0].latitude, withPos[0].longitude], 12);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap', maxZoom: 18 }).addTo(posMap);
+      const markerObjs = [];
+      withPos.forEach(p => {
+        const mk = L.marker([p.latitude, p.longitude], {
+          title: p.userName,
+          icon: L.divIcon({ html: `<div style="font-size:12px;background:#e63946;color:#fff;border:2px solid #fff;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,.3)">${(''+p.userName).charAt(0)}</div>`, iconSize: [24,24], iconAnchor: [12,12] })
+        }).addTo(posMap).bindPopup(`<b>${esc(p.userName)}</b><br><span style="font-size:12px;color:#6c6c80">${p.latitude.toFixed(5)}, ${p.longitude.toFixed(5)}</span><br><span style="font-size:11px">last seen: ${esc(formatLastSeen(p.recordedAt))}</span>`);
+        markerObjs.push(mk);
+      });
+      if (withPos.length > 1) {
+        posMap.fitBounds(L.featureGroup(markerObjs).getBounds().pad(0.15));
+      }
+    }
+  } catch(e) {
+    document.getElementById('posLoading').textContent = 'Gagal memuat posisi: ' + e.message;
+  }
+}
+function esc(s) { return String(s==null?'':s).replace(/[&<>"']/g, function(m){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];}); }
+
+loadDashboard();
+loadPlan();
+loadVisits();
+loadTeam();
+loadPositions();
+
+document.querySelectorAll('.rencana-drop').forEach(function(dd){var menu=dd.querySelector('span[style*="position:absolute"]');if(!menu)return;dd.addEventListener('mouseenter',function(){menu.style.display='block'});dd.addEventListener('mouseleave',function(){menu.style.display='none'});});
+</script>
+<div id="appFooter"></div>
+<script src="js/include.js"></script>
+</body>
+</html>

@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WIM Admin — Lihat List Kunjungan</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f0f2f5;color:#1a1a2e;font-size:14px}
+.topnav{background:#1a1a2e;color:#fff;padding:0 24px;display:flex;align-items:center;height:56px;position:sticky;top:0;z-index:100}
+.topnav .brand{font-weight:700;font-size:16px;margin-right:32px}
+.topnav .brand span{color:#8e8ea0;font-weight:400}
+.topnav nav{display:flex;gap:4px;flex:1}
+.topnav nav a{color:#b0b0c8;text-decoration:none;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:500;transition:all .15s}
+.topnav nav a:hover{color:#fff;background:rgba(255,255,255,.08)}
+.topnav nav a.active{color:#fff;background:#4361ee}
+.dropdown{position:relative}
+.dropdown-menu{position:absolute;top:38px;left:0;background:#fff;border-radius:10px;box-shadow:0 6px 18px rgba(0,0,0,.15);min-width:200px;overflow:hidden;display:none;z-index:500;padding:6px}
+.dropdown:hover .dropdown-menu{display:block}
+.dropdown-menu a{display:block;padding:10px 14px;color:#1a1a2e;text-decoration:none;font-size:13px;border-radius:6px}
+.dropdown-menu a:hover{background:#eef1f6}
+.dropdown-menu a.active{background:#e8f0fe;color:#4361ee}
+.user-info{font-size:12px;color:#8e8ea0;display:flex;align-items:center;gap:8px}
+.user-info .role-badge{background:#4361ee;padding:2px 8px;border-radius:6px;font-size:11px;color:#fff}
+.logout{color:#e63946;cursor:pointer;font-size:12px;margin-left:12px;text-decoration:none}
+.container{max-width:1280px;margin:0 auto;padding:24px}
+.page-title{font-size:20px;font-weight:700;margin-bottom:20px}
+.page-title .sub{font-size:13px;color:#8e8ea0;font-weight:400}
+.card{background:#fff;border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,.04);overflow:hidden}
+.card-header{padding:16px 20px;border-bottom:1px solid #f0f2f5;display:flex;justify-content:space-between;align-items:center}
+.card-header h3{font-size:15px;font-weight:600}
+.card-body{padding:0}
+.status-badge{display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600}
+.status-ok{background:#d4f5e2;color:#0a7c42}
+.status-warn{background:#fff3cd;color:#856404}
+.status-info{background:#e8f0fe;color:#4361ee}
+.status-miss{background:#fde8e8;color:#c0392b}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{padding:9px 12px;text-align:left;font-weight:600;color:#6c6c80;font-size:11px;text-transform:uppercase;letter-spacing:.5px;background:#fafbfc;border-bottom:1px solid #eef0f4}
+td{padding:9px 12px;border-bottom:1px solid #f0f2f5}
+tr:hover td{background:#f8f9fc}
+tr.clickable{cursor:pointer}
+.loading{text-align:center;padding:40px;color:#8e8ea0}
+.error-bar{background:#fde8e8;color:#c0392b;padding:12px 20px;border-radius:8px;margin-bottom:16px;font-size:13px;display:none}
+/* Calendar */
+.cal-wrap{overflow-x:auto;background:#fff;border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,.04)}
+.cal-head{display:flex;gap:10px;align-items:center;padding:10px 16px;flex-wrap:wrap}
+.cal-table{width:100%;border-collapse:collapse;font-size:12px}
+.cal-table th{background:#f0f2f5;color:#6c6c80;padding:8px}
+.cal-table td{padding:8px;height:44px;text-align:center;border:1px solid #e8ebf2;cursor:pointer}
+.cal-table td.empty{background:#fafbfc}
+.cal-table td.today{background:#e8f0fe;font-weight:700;border:2px solid #4361ee}
+.cal-table td.selected{background:#4361ee;color:#fff;font-weight:700}
+.cal-table td:hover:not(.empty){background:#e8f0fe}
+/* Modal */
+.modal{position:fixed;inset:0;background:rgba(15,20,35,.55);display:none;align-items:center;justify-content:center;z-index:900}
+.modal-inner{background:#fff;border-radius:14px;box-shadow:0 10px 40px rgba(0,0,0,.2);max-width:900px;width:94%;max-height:85vh;display:flex;flex-direction:column}
+.modal-head{padding:16px 20px;border-bottom:1px solid #f0f2f5;font-size:15px;font-weight:700;display:flex;justify-content:space-between;align-items:center}
+.modal-body{padding:14px 20px;overflow:auto}
+.modal-foot{padding:14px 20px;border-top:1px solid #f0f2f5;display:flex;justify-content:flex-end;gap:10px}
+.btn{padding:8px 14px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none}
+.btn-primary{background:#4361ee;color:#fff}
+.btn-success{background:#0a7c42;color:#fff}
+.btn-outline{background:#fff;color:#4361ee;border:1px solid #d0d5dd}
+.btn-sm{padding:5px 10px;font-size:12px}
+.btn[disabled]{opacity:.4;cursor:not-allowed}
+.muted{color:#8e8ea0;font-size:12px}
+.red-alasan{background:#fde8e8;color:#c0392b;padding:6px 10px;border-radius:8px;font-size:12px}
+.img-thumb{max-width:110px;max-height:110px;object-fit:cover;border-radius:8px;border:1px solid #e0e4ec;display:inline-block;margin:4px;cursor:pointer}
+.img-big{max-width:340px;max-height:340px;object-fit:contain;border-radius:8px}
+</style>
+</head>
+<body data-page="today-plan">
+<div id="appHeader"></div>
+<div class="container">
+  <div class="error-bar" id="errorBar"></div>
+
+  <div class="page-title">👁️ Lihat List Kunjungan <span class="sub" id="titleSub">-</span></div>
+
+  <!-- Calendar -->
+  <div class="cal-wrap" id="calWrap">
+    <div class="cal-head">
+      <button class="btn btn-outline btn-sm" onclick="shiftMonth(-1)">‹</button>
+      <b id="calMonthLabel">-</b>
+      <button class="btn btn-outline btn-sm" onclick="shiftMonth(1)">›</button>
+      <span class="muted" style="margin-left:8px">Diklik tanggal untuk melihat kunjungan</span>
+    </div>
+    <table class="cal-table" id="calTable"></table>
+  </div>
+
+  <!-- Sales summary table -->
+  <div class="card" style="margin-top:16px">
+    <div class="card-header"><h3>👥 Sales — <span id="salesDateLabel">-</span></h3></div>
+    <div class="card-body">
+      <div class="loading" id="salesLoading" style="display:none">Memuat kunjungan...</div>
+      <table id="salesTable" style="display:none;width:100%">
+        <thead><tr><th>Sales</th><th>Region</th><th>Status</th><th>Nominal Toko dalam Rute</th><th>Nominal Toko Luar Rute</th><th>Detail</th></tr></thead>
+        <tbody id="salesBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Detail modal -->
+<div class="modal" id="detailModal">
+  <div class="modal-inner">
+    <div class="modal-head"><span>📋 Detail Kunjungan — <span id="dtSales">-</span></span><span style="cursor:pointer" onclick="closeDetail()">✕</span></div>
+    <div class="modal-body">
+      <div id="dtBody"></div>
+    </div>
+    <div class="modal-foot"><button class="btn btn-outline" onclick="closeDetail()">Tutup</button></div>
+  </div>
+</div>
+
+<!-- Image zoom modal -->
+<div class="modal" id="imgModal">
+  <div class="modal-inner" style="max-width:420px">
+    <div class="modal-head"><span>Foto</span><span style="cursor:pointer" onclick="document.getElementById('imgModal').style.display='none'">✕</span></div>
+    <div class="modal-body"><img class="img-big" id="imgModalSrc" src=""></div>
+  </div>
+</div>
+
+<!-- Pesanan modal -->
+<div class="modal" id="ordersModal">
+  <div class="modal-inner">
+    <div class="modal-head"><span>📦 Pesanan — <span id="ordStore">-</span></span><span style="cursor:pointer" onclick="closeOrders()">✕</span></div>
+    <div class="modal-body" id="ordersBody"></div>
+    <div class="modal-foot"><button class="btn btn-outline" onclick="closeOrders()">Tutup</button></div>
+  </div>
+</div>
+
+<!-- Stock modal -->
+<div class="modal" id="stockModal">
+  <div class="modal-inner">
+    <div class="modal-head"><span>📦 Stock Toko — <span id="stkStore">-</span></span><span style="cursor:pointer" onclick="closeStock()">✕</span></div>
+    <div class="modal-body" id="stockBody"></div>
+    <div class="modal-foot"><button class="btn btn-outline" onclick="closeStock()">Tutup</button></div>
+  </div>
+</div>
+
+<script>
+const ADMIN_KEY='wim_admin_token';
+try{const u=JSON.parse(sessionStorage.getItem('admin_user')||'{}');if(document.getElementById('userName'))document.getElementById('userName').textContent=u.name||'-';if(document.getElementById('userRole'))document.getElementById('userRole').textContent=u.role||'-'}catch(e){}
+async function api(path,opts){const r=await fetch(path,{credentials:'same-origin',headers:{'Accept':'application/json','Content-Type':'application/json'},...opts});if(r.status===401){logout();throw new Error('Sesi habis')}const d=await r.json();if(!r.ok)throw new Error(d.error||'Gagal');return d}
+function logout(){localStorage.removeItem(ADMIN_KEY);sessionStorage.removeItem('admin_user');fetch('/api/admin/logout',{method:'POST',credentials:'same-origin'}).catch(()=>{});location.href='index.html'}
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(m){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]})}
+
+let calYear=new Date().getFullYear(), calMonth=new Date().getMonth()+1;
+let selectedDate=toISO(new Date());
+const DOW=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+function toISO(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
+function toReadable(ds){const p=ds.split('-');const d=new Date(p[0],p[1]-1,p[2]);return d.toLocaleDateString('id-ID',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}
+function fmtTime(ts){if(!ts)return '-';const d=new Date(String(ts).replace(' ','T'));if(isNaN(d.getTime()))return ts;return d.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'})}
+
+function renderCal(){
+  document.getElementById('calMonthLabel').textContent=new Date(calYear,calMonth-1,1).toLocaleDateString('id-ID',{month:'long',year:'numeric'}).toUpperCase();
+  const first=new Date(calYear,calMonth-1,1);
+  const startDow=first.getDay();
+  const daysInMonth=new Date(calYear,calMonth,0).getDate();
+  const now=new Date();const todayISO=toISO(now);
+  let th='<tr>'+DOW.map(d=>`<th>${d}</th>`).join('')+'</tr>';
+  let cells='';
+  let day=1;
+  const totalCells=Math.ceil((startDow+daysInMonth)/7)*7;
+  for(let i=0;i<totalCells;i++){
+    if(i%7===0)cells+='<tr>';
+    if(i<startDow){cells+='<td class="empty"></td>';}
+    else if(day<=daysInMonth){
+      const ds=toISO(new Date(calYear,calMonth-1,day));
+      let cls=ds===todayISO?'today':'';if(ds===selectedDate)cls+=' selected';
+      cells+=`<td class="${cls}" onclick="pickDate('${ds}')">${day}</td>`;
+      day++;
+    }else{cells+='<td class="empty"></td>';}
+  }
+  document.getElementById('calTable').innerHTML=th+cells;
+}
+function shiftMonth(d){calMonth+=d;if(calMonth<1){calMonth=12;calYear--}if(calMonth>12){calMonth=1;calYear++}renderCal();}
+function pickDate(ds){selectedDate=ds;renderCal();loadRencana();}
+
+function statusBadge(status){
+  const map={berjalan:['status-warn','🟡 Berjalan'],selesai:['status-ok','🟢 Sudah Selesai'],belum_masuk:['status-miss','⚪ Belum Masuk'],'':'status-info','-':'status-info'};
+  const[m,label]=map[status]||['status-info',status];
+  return `<span class="status-badge ${m}">${label}</span>`;
+}
+
+async function loadRencana(){
+  const sl=document.getElementById('salesLoading');sl.style.display='';
+  const t=document.getElementById('salesTable');t.style.display='none';
+  document.getElementById('salesDateLabel').textContent=toReadable(selectedDate);
+  document.getElementById('titleSub').textContent=toReadable(selectedDate);
+  try{
+    const d=await api('/api/admin/rencana/view?date='+selectedDate);
+    const sales=d.sales||[];
+    sl.style.display='none';t.style.display='';
+    const tb=document.getElementById('salesBody');
+    if(!sales.length){tb.innerHTML='<tr><td colspan="6" style="text-align:center;padding:24px;color:#8e8ea0">Tidak ada rencana untuk tanggal ini</td></tr>';return;}
+    tb.innerHTML=sales.map(s=>`<tr class="clickable" onclick="openDetail(${JSON.stringify(s.userId)})">
+      <td><b>${esc(s.userName||'-')}</b><br><span class="muted">${esc(s.email||'')}</span></td>
+      <td>${esc(s.region||'-')}</td>
+      <td>${statusBadge(s.status)}</td>
+      <td style="text-align:center">${s.inRouteCount}</td>
+      <td style="text-align:center">${s.outRouteCount}</td>
+      <td><button class="btn btn-outline btn-sm" onclick="event.stopPropagation();openDetail(${s.userId})">Detail</button></td>
+    </tr>`).join('');
+  }catch(e){sl.style.display='none';document.getElementById('errorBar').textContent='Gagal: '+e.message;document.getElementById('errorBar').style.display='block';}
+}
+
+async function openDetail(uid){
+  try{
+    const d=await api('/api/admin/rencana/view?date='+selectedDate+'&user_id='+uid);
+    // find the exact user (backend now filters by user_id; fall back to [0] defensively)
+    const uidNum=Number(uid);
+    const s=(d.sales||[]).find(x=>Number(x.userId)===uidNum) || (d.sales||[])[0];
+    if(!s)return;
+    document.getElementById('dtSales').textContent=s.userName;
+    const body=document.getElementById('dtBody');
+    body.innerHTML='<div style="margin-bottom:8px"><span class="muted">Region:</span> '+esc(s.region||'-')+' &nbsp; <span class="muted">Status:</span> '+statusBadge(s.status)+'</div>';
+    body.innerHTML+=`<table style="width:100%;border-collapse:collapse;font-size:13px">
+      <thead><tr><th style="background:#f5f7fa;text-align:left;padding:8px 10px">Toko</th><th style="background:#f5f7fa;text-align:left;padding:8px 10px">Lokasi(Src)</th><th style="background:#f5f7fa;text-align:left;padding:8px 10px">Time Dikunjungi</th><th style="background:#f5f7fa;text-align:left;padding:8px 10px">Order</th><th style="background:#f5f7fa;text-align:left;padding:8px 10px">Aksi</th></tr></thead><tbody>`+
+      s.stores.map(st=>{
+        const orderCell = st.orderCount>0 ? '<span class="status-badge status-ok">✅ Order</span>' : '<span class="status-badge status-miss">No Order</span>';
+        const alasan = (st.orderCount===0 && st.alasan) ? `<div class="red-alasan">⚠️ ${esc(st.alasan)}</div>` : '';
+        const disabled = st.orderCount===0 ? 'disabled' : '';
+        return `<tr>
+          <td><b>${esc(st.storeName)}</b>${alasan}</td>
+          <td>${st.source==='luar_rute'?'<span class="status-badge status-warn">Luar Rute</span>':'<span class="status-badge status-info">In Rute</span>'}</td>
+          <td>${st.visited?fmtTime(st.checkinAt)+' → '+fmtTime(st.checkoutAt):'<span class="muted">Belum dikunjungi</span>'}</td>
+          <td>${orderCell}</td>
+          <td style="white-space:nowrap">
+            <button class="btn btn-outline btn-sm" onclick="showCheckinPhoto('${esc(st.checkinPhoto||'')}')">📷 Foto Checkin</button>
+            <button class="btn btn-outline btn-sm" onclick="showTambahan('${esc(st.photos||'[]')}')">🖼️ Foto Tambahan</button>
+            <button class="btn btn-primary btn-sm" ${disabled} onclick="openOrders('${esc(st.storeUuid)}','${esc(st.storeName)}')">📦 Cek Pesanan</button>
+            <button class="btn btn-success btn-sm" onclick="openStock('${esc(st.storeUuid)}','${esc(st.storeName)}')">📊 Stock Toko</button>
+          </td>
+        </tr>`;
+      }).join('')+`</tbody></table>`;
+    document.getElementById('detailModal').style.display='flex';
+  }catch(e){document.getElementById('errorBar').textContent='Gagal detail: '+e.message;document.getElementById('errorBar').style.display='block';}
+}
+function closeDetail(){document.getElementById('detailModal').style.display='none'}
+function showCheckinPhoto(photo){
+  if(!photo){alert('Belum ada foto checkin');return;}
+  document.getElementById('imgModalSrc').src=photo;
+  document.getElementById('imgModal').style.display='flex';
+}
+function showTambahan(photosJson){
+  let arr=[];try{arr=JSON.parse(photosJson)}catch(e){arr=[]}
+  if(!Array.isArray(arr)||!arr.length){alert('Belum ada foto tambahan');return;}
+  document.getElementById('imgModalSrc').src=arr[0].url||arr[0];
+  document.getElementById('imgModal').style.display='flex';
+}
+async function openOrders(storeUuid,storeName){
+  document.getElementById('ordStore').textContent=storeName;
+  const body=document.getElementById('ordersBody');
+  body.innerHTML='<div class="loading">Memuat pesanan...</div>';
+  document.getElementById('ordersModal').style.display='flex';
+  try{
+    const d=await api('/api/admin/stores/orders?place_uuid='+encodeURIComponent(storeUuid));
+    const orders=d.orders||d.data||[];
+    body.innerHTML=orders.length?`<table style="width:100%;border-collapse:collapse;font-size:13px">
+      <thead><tr style="background:#f5f7fa"><th style="text-align:left;padding:8px">Order Ref</th><th style="text-align:left;padding:8px">Tanggal</th><th style="text-align:left;padding:8px">Subtotal</th><th style="text-align:left;padding:8px">Discount</th><th style="text-align:left;padding:8px">Total</th><th style="text-align:left;padding:8px">Status</th></tr></thead>
+      <tbody>${orders.map(o=>`<tr><td><b>${esc(o.orderRef||o.order_ref||o.id||'-')}</b></td><td>${fmtTime(o.createdAt||o.created_at)}</td><td>Rp ${Number(o.subtotal||o.total||0).toLocaleString('id-ID')}</td><td>Rp ${Number(o.totalDiscount||o.discount||0).toLocaleString('id-ID')}</td><td><b>Rp ${Number(o.grandTotal||o.total||0).toLocaleString('id-ID')}</b></td><td>${esc(o.status||o.verificationStatus||'-')}</td></tr>`).join('')}</tbody></table>`
+    :'<div style="padding:30px;color:#8e8ea0">Belum ada pesanan untuk toko ini</div>';
+  }catch(e){body.innerHTML='<div style="padding:20px;color:#c0392b">Gagal: '+esc(e.message)+'</div>';}
+}
+function closeOrders(){document.getElementById('ordersModal').style.display='none'}
+async function openStock(storeUuid,storeName){
+  document.getElementById('stkStore').textContent=storeName;
+  const body=document.getElementById('stockBody');
+  body.innerHTML='<div class="loading">Memuat stock...</div>';
+  document.getElementById('stockModal').style.display='flex';
+  try{
+    const d=await api('/api/admin/stock?place_uuid='+encodeURIComponent(storeUuid));
+    const items=d.stock||d.items||d.data||[];
+    body.innerHTML=items.length?`<table style="width:100%;border-collapse:collapse;font-size:13px">
+      <thead><tr style="background:#f5f7fa"><th style="text-align:left;padding:8px">SKU</th><th style="text-align:left;padding:8px">Nama</th><th style="text-align:left;padding:8px">Qty</th></tr></thead>
+      <tbody>${items.map(i=>`<tr><td>${esc(i.sku||'-')}</td><td>${esc(i.name||i.product_name||'')}</td><td>${esc(i.qty||i.quantity||0)}</td></tr>`).join('')}</tbody></table>`
+    :'<div style="padding:30px;color:#8e8ea0">Belum ada stock recorded untuk toko ini</div>';
+  }catch(e){body.innerHTML='<div style="padding:20px;color:#c0392b">Gagal: '+esc(e.message)+'</div>';}
+}
+function closeStock(){document.getElementById('stockModal').style.display='none'}
+
+// init
+document.getElementById('salesDateLabel').textContent=toReadable(selectedDate);
+document.getElementById('titleSub').textContent=toReadable(selectedDate);
+renderCal();
+loadRencana();
+</script>
+<div id="appFooter"></div>
+<script src="js/include.js"></script>
+</body>
+</html>

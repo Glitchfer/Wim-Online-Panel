@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WIM Admin — Absensi</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f0f2f5;color:#1a1a2e;font-size:14px}
+.topnav{background:#1a1a2e;color:#fff;padding:0 24px;display:flex;align-items:center;height:56px;position:sticky;top:0;z-index:100}
+.topnav .brand{font-weight:700;font-size:16px;margin-right:32px}.topnav .brand span{color:#8e8ea0;font-weight:400}
+.topnav nav{display:flex;gap:4px;flex:1}
+.topnav nav a{color:#b0b0c8;text-decoration:none;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:500;transition:all .15s}
+.topnav nav a:hover{color:#fff;background:rgba(255,255,255,.08)}
+.topnav nav a.active{color:#fff;background:#4361ee}
+.topnav .user-info{font-size:12px;color:#8e8ea0;display:flex;align-items:center;gap:8px}
+.topnav .user-info .role-badge{background:#4361ee;padding:2px 8px;border-radius:6px;font-size:11px;color:#fff}
+.topnav .logout{color:#e63946;cursor:pointer;font-size:12px;margin-left:12px;text-decoration:none}
+.container{max-width:1400px;margin:0 auto;padding:24px}
+.page-title{font-size:20px;font-weight:700;margin-bottom:20px}
+.page-title .sub{font-size:13px;color:#8e8ea0;font-weight:400}
+.filters{display:flex;gap:10px;margin-bottom:16px;align-items:center;flex-wrap:wrap;background:#fff;padding:12px 16px;border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,.04)}
+.filters label{font-size:12px;font-weight:600;color:#6c6c80;white-space:nowrap}
+.filters input,.filters select{padding:7px 10px;border:1.5px solid #e0e0e8;border-radius:8px;font-size:13px;background:#fff}
+.filters input:focus,.filters select:focus{outline:none;border-color:#4361ee}
+.filters .sep{width:1px;height:26px;background:#e0e0e8}
+.csv-btn{padding:8px 16px;border:none;border-radius:8px;background:#0a7c42;color:#fff;font-size:13px;font-weight:600;cursor:pointer}
+.card{background:#fff;border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,.04);overflow:hidden}
+.card-body{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{padding:10px 14px;text-align:left;font-weight:600;color:#6c6c80;font-size:11px;text-transform:uppercase;letter-spacing:.5px;background:#fafbfc;border-bottom:1px solid #eef0f4}
+td{padding:10px 14px;border-bottom:1px solid #f0f2f5}
+tr:hover td{background:#f8f9fc}
+.status-badge{display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600}
+.status-ok{background:#d4f5e2;color:#0a7c42}
+.status-warn{background:#fff3cd;color:#856404}
+.status-miss{background:#fde8e8;color:#c0392b}
+.loading{text-align:center;padding:40px;color:#8e8ea0}
+.gf-report{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px}
+@media(max-width:600px){.gf-report{grid-template-columns:1fr}}
+.gf-card{background:#fff;border-radius:10px;padding:16px;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,.04)}
+.gf-card .num{font-size:28px;font-weight:700}
+.gf-card .lbl{font-size:12px;color:#8e8ea0;margin-top:2px}
+</style>
+</head>
+<body data-page="attendance">
+<div id="appHeader"></div>
+<div class="container">
+  <div class="page-title">⏰ Absensi &amp; Geofence <span class="sub">Log absensi tim</span></div>
+  <div class="filters">
+    <label>Dari</label><input type="date" id="fFrom" onchange="load()">
+    <label>Sampai</label><input type="date" id="fTo" onchange="load()">
+    <span class="sep"></span>
+    <label>Sales</label>
+    <select id="fSales" onchange="load()"><option value="">Semua Sales</option></select>
+    <label>Region</label>
+    <select id="fRegion" onchange="filterDepots();load()"><option value="">Semua Region</option></select>
+    <label>Depo</label>
+    <select id="fDepot" onchange="load()"><option value="">Semua Depo</option></select>
+    <button class="csv-btn" onclick="downloadCsv()">⬇ CSV</button>
+  </div>
+  <div class="gf-report" id="gfSummary"></div>
+  <div class="card">
+    <div class="card-body">
+      <div class="loading" id="attLoading">Memuat...</div>
+      <table id="attTable" style="display:none">
+        <thead><tr><th>Date</th><th>Nama</th><th>Clock In</th><th>Clock Out</th><th>Durasi</th><th>Region</th><th>Depo</th><th>Geofence</th></tr></thead>
+        <tbody id="attBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+<script>
+const ADMIN_KEY='wim_admin_token';
+let ALL_REC=[], OPTS={users:[],regions:[],depots:[]};
+try{const u=JSON.parse(sessionStorage.getItem('admin_user')||'{}');if(document.getElementById('userName'))document.getElementById('userName').textContent=u.name||'-';if(document.getElementById('userRole'))document.getElementById('userRole').textContent=u.role||'-'}catch(e){}
+async function api(p){const r=await fetch(p,{credentials:'same-origin',headers:{'Accept':'application/json'}});if(r.status===401){logout();throw new Error('Session expired')}const d=await r.json();if(!r.ok)throw new Error(d.error||'API error');return d}
+function logout(){localStorage.removeItem(ADMIN_KEY);sessionStorage.removeItem('admin_user');fetch('/api/admin/logout',{method:'POST',credentials:'same-origin'}).catch(()=>{});location.href='index.html'}
+function setDate(id,daysAgo){const d=new Date();d.setDate(d.getDate()-daysAgo);document.getElementById(id).valueAsDate=d}
+function initDates(){if(!document.getElementById('fFrom').value)setDate('fFrom',30);if(!document.getElementById('fTo').value)setDate('fTo',0)}
+async function loadOptions(){
+  try{OPTS=await api('/api/admin/filter-options')}catch(e){OPTS={users:[],regions:[],depots:[]}}
+  const saleSel=document.getElementById('fSales');const regionSel=document.getElementById('fRegion');const depotSel=document.getElementById('fDepot');
+  saleSel.innerHTML='<option value="">Semua Sales</option>'+OPTS.users.map(u=>`<option value="${u.id}" ${u.depotName?`data-depot="${esc(u.depotId)}"`:''}>${esc(u.name)}${u.regionName?' — '+esc(u.regionName):''}</option>`).join('');
+  regionSel.innerHTML='<option value="">Semua Region</option>'+OPTS.regions.map(r=>`<option value="${r.id}">${esc(r.name)}</option>`).join('');
+  filterDepots();
+}
+function filterDepots(){
+  const regionSel=document.getElementById('fRegion');const depotSel=document.getElementById('fDepot');
+  const regionId=regionSel.value;
+  let list=OPTS.depots;
+  if(regionId)list=list.filter(d=>String(d.regionId)===String(regionId));
+  depotSel.innerHTML='<option value="">Semua Depo</option>'+list.map(d=>`<option value="${d.id}">${esc(d.name)}</option>`).join('');
+}
+function currentRows(){
+  let rows=ALL_REC;
+  return rows;
+}
+function render(){
+  const tb=document.getElementById('attBody');
+  if(!ALL_REC.length){tb.innerHTML='<tr><td colspan="8" style="text-align:center;padding:20px;color:#8e8ea0">Tidak ada data absensi periode ini</td></tr>';return}
+  tb.innerHTML=ALL_REC.map(r=>{const gf=r.geofenceStatus==='in_depot'?'<span class="status-badge status-ok">🏭 '+esc(r.depotName||'Depo')+'</span>':r.geofenceStatus==='outside'?'<span class="status-badge status-warn">📍 Luar Depo</span>':'<span class="status-badge">-</span>';const dt=r.date?r.date:'-';return `<tr><td>${dt}</td><td><b>${esc(r.name)}</b></td><td>${r.clockIn||'-'}</td><td>${r.clockOut||'-'}</td><td>${r.duration||'-'}</td><td><span class="status-badge status-info">${esc(r.regionName||'-')}</span></td><td style="font-size:12px;color:#6c6c80">${esc(r.depotName||'-')}</td><td>${gf}</td></tr>`}).join('');
+}
+function esc(s){return String(s||'').replace(/[&<>"']/g,function(m){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]})}
+function csvEsc(s){s=String(s||'');return (s.includes(',')||s.includes('"')||s.includes('\n'))?'"'+s.replace(/"/g,'""')+'"':s}
+function downloadCsv(){
+  if(!ALL_REC.length){alert('Tidak ada data');return}
+  const head=['Date','Nama','Clock In','Clock Out','Durasi','Region','Depo','Geofence'];
+  const lines=[head.join(',')].concat(ALL_REC.map(r=>[r.date||'',csvEsc(r.name),r.clockIn||'',r.clockOut||'',r.duration||'',csvEsc(r.regionName||''),csvEsc(r.depotName||''),r.geofenceStatus||''].join(',')));
+  const blob=new Blob(['\uFEFF'+lines.join('\n')],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='absensi-periodo.csv';a.click();URL.revokeObjectURL(a.href);
+}
+function buildQuery(){
+  const from=document.getElementById('fFrom').value,to=document.getElementById('fTo').value;
+  const sales=document.getElementById('fSales').value,region=document.getElementById('fRegion').value,depot=document.getElementById('fDepot').value;
+  const p=new URLSearchParams();
+  if(from)p.set('date_from',from);if(to)p.set('date_to',to);
+  if(sales)p.set('user_id',sales);if(region)p.set('region_id',region);if(depot)p.set('depot_id',depot);
+  return p.toString();
+}
+async function load(){
+  initDates();
+  const qs=buildQuery();
+  try{
+    const d=await api('/api/admin/attendance?'+qs);
+    ALL_REC=d.records||[];
+    const depoCnt=ALL_REC.filter(r=>r.geofenceStatus==='in_depot').length;
+    const luarCnt=ALL_REC.filter(r=>r.geofenceStatus==='outside').length;
+    document.getElementById('gfSummary').innerHTML=`<div class="gf-card"><div class="num" style="color:#0a7c42">${depoCnt}</div><div class="lbl">🏭 Check-in di Depo</div></div><div class="gf-card"><div class="num" style="color:#856404">${luarCnt}</div><div class="lbl">📍 Check-in di Luar Depo</div></div>`;
+    document.getElementById('attLoading').style.display='none';document.getElementById('attTable').style.display='';render();
+  }catch(e){document.getElementById('attLoading').textContent='Error: '+e.message}
+}
+initDates();loadOptions();load();
+
+document.querySelectorAll('.rencana-drop').forEach(function(dd){var menu=dd.querySelector('span[style*="position:absolute"]');if(!menu)return;dd.addEventListener('mouseenter',function(){menu.style.display='block'});dd.addEventListener('mouseleave',function(){menu.style.display='none'});});
+</script>
+<div id="appFooter"></div>
+<script src="js/include.js"></script>
+</body>
+</html>

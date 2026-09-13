@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WIM Online — Kupon Pesanan</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--brand:#1a1a2e;--blue:#4361ee;--green:#0a7c42;--red:#c0392b;--border:#e5e8ef;--muted:#8e8ea0;--bg:#f0f2f5}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--brand);font-size:14px}
+
+.status-banner{background:#fff3d6;color:#8a6d1a;padding:10px 16px;border-radius:10px;font-size:12px;font-weight:600;text-align:center;margin-bottom:16px}
+
+.sheet{max-width:720px;margin:0 auto;background:#fff;border:1px solid var(--border);border-radius:14px;padding:32px}
+.sheet-header{display:flex;justify-content:space-between;align-items:flex-start;gap:16px}
+.sheet-header .co{margin-top:10px}
+.sheet-header .co .co-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px}
+.sheet-header .co .co-name{font-size:18px;font-weight:700;color:var(--brand);line-height:1.2}
+.sheet-header .co .co-addr{font-size:11px;color:var(--muted)}
+.sheet-header .title-box{text-align:right}
+.sheet-header .title-box h1{font-size:20px;font-weight:800;color:var(--brand);margin:0}
+.sheet-header .title-box .badge{display:inline-block;margin-top:8px;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;background:#fde8e8;color:var(--red)}
+.badge-confirmed{background:#d4f5e2;color:var(--green)}
+
+hr.sep{border:none;border-top:1px solid var(--border);margin:18px 0}
+
+.info{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.info .blk .lbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}
+.info .blk .val{font-size:14px;font-weight:600;color:var(--brand)}
+.info .blk .val-sub{font-size:12px;color:var(--muted)}
+
+.order-meta{display:flex;gap:12px;flex-wrap:wrap;background:var(--bg);border-radius:10px;padding:12px 16px;margin-top:6px}
+.order-meta .om{flex:1;min-width:120px}
+.order-meta .om .lbl{font-size:10px;color:var(--muted);text-transform:uppercase}
+.order-meta .om .val{font-size:14px;font-weight:700}
+
+table.items{width:100%;border-collapse:collapse;font-size:13px}
+th{padding:10px 12px;text-align:left;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.5px;background:#fafbfc;border-bottom:1px solid var(--border)}
+td{padding:10px 12px;border-bottom:1px solid var(--border)}
+td.num,th.num{text-align:right}
+tr.bonus td{color:var(--green);font-size:12px;font-style:italic}
+tr.total-row td{background:#fafbfc;font-weight:700}
+
+.summary{margin-top:8px;display:flex;flex-direction:column;gap:6px;max-width:300px;margin-left:auto}
+.summary .line{display:flex;justify-content:space-between}
+.summary .line .k{color:var(--muted);font-size:12px}
+.summary .grand{display:flex;justify-content:space-between;font-size:16px;font-weight:800;color:var(--brand);background:#eef4ff;padding:8px 14px;border-radius:8px}
+
+.footer{margin-top:20px;font-size:11px;color:var(--muted);text-align:center;line-height:1.6}
+
+.dl-bar{position:sticky;bottom:0;background:#fff;border-top:1px solid var(--border);padding:14px;text-align:center}
+.dl-btn{background:var(--blue);color:#fff;border:none;padding:12px 26px;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer}
+
+.msg{max-width:720px;margin:0 auto;padding:60px 24px;text-align:center}
+.msg h2{font-size:22px;font-weight:700;color:var(--brand);margin:12px 0}
+.msg p{color:var(--muted);font-size:13px}
+
+@media print{
+  body{background:#fff}
+  .sheet{border:none;box-shadow:none;margin:0}
+  .dl-bar{display:none}
+  .status-banner{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  td,th{print-color-adjust:exact;-webkit-print-color-adjust:exact}
+}
+</style>
+</head>
+<body>
+<div class="msg" id="msgBox" style="display:none">
+  <div style="font-size:48px">🔍</div>
+  <h2 id="msgTitle">Memuat kupon...</h2>
+  <p id="msgBody"></p>
+</div>
+
+<div class="sheet" id="sheetBox" style="display:none">
+  <div class="status-banner" id="statusBanner">⚠️ Kupon Pesanan — BELUM DIBAYAR (UNPAID) · bukan tax invoice</div>
+
+  <div class="sheet-header">
+    <div class="co">
+      <div class="co-label">PT Wahana Inti Mas</div>
+      <div class="co-name">WIM Online</div>
+      <div class="co-addr">Distribution</div>
+    </div>
+    <div class="title-box">
+      <h1>KUPON PESANAN</h1>
+      <span class="badge" id="payBadge">UNPAID</span>
+    </div>
+  </div>
+  <hr class="sep">
+
+  <div class="info">
+    <div class="blk">
+      <div class="lbl">Toko / Akun</div>
+      <div class="val" id="iStore">-</div>
+      <div class="val-sub" id="iStoreAddr"></div>
+    </div>
+    <div class="blk">
+      <div class="lbl">Sales</div>
+      <div class="val" id="iRep">-</div>
+      <div class="val-sub" id="iChannel"></div>
+    </div>
+  </div>
+
+  <div class="order-meta">
+    <div class="om"><div class="lbl">No. Pesanan</div><div class="val" id="iOrder">-</div></div>
+    <div class="om"><div class="lbl">Tanggal</div><div class="val" id="iDate">-</div></div>
+    <div class="om"><div class="lbl">Item/Trx</div><div class="val" id="iCount">-</div></div>
+    <div class="om"><div class="lbl">Pembayaran</div><div class="val" id="iPay">-</div></div>
+  </div>
+  <hr class="sep">
+
+  <table class="items">
+    <thead><tr><th>Produk</th><th class="num">Qty</th><th class="num">Harga</th><th class="num">Total</th></tr></thead>
+    <tbody id="itemsBody"></tbody>
+    <tr class="total-row">
+      <td colspan="3" style="text-align:right">Subtotal</td>
+      <td class="num" id="fSubtotal">Rp 0</td>
+    </tr>
+    <tr class="total-row">
+      <td colspan="3" style="text-align:right">Diskonto</td>
+      <td class="num" id="fDiscount">- Rp 0</td>
+    </tr>
+    <tr class="total-row">
+      <td colspan="3" style="text-align:right;font-weight:800">GRAND TOTAL</td>
+      <td class="num" id="fGrand" style="font-weight:800;font-size:15px">Rp 0</td>
+    </tr>
+  </table>
+
+  <div class="footer" id="footerNote">
+    Kupon ini adalah <b>kupon pesanan (order confirmation)</b> dan bukan tax invoice.<br>
+    Status pembayaran: <b>BELUM DIBAYAR</b>. Kupon ini akan diperbarui menjadi penagihan/invoice setelah pembayaran.<br>
+    PT Wahana Inti Mas · WIM Online
+  </div>
+</div>
+
+<div class="dl-bar" id="dlBar" style="display:none">
+  <button class="dl-btn" onclick="window.print()">⬇ Download PDF / Print</button>
+</div>
+
+<script>
+const params = new URLSearchParams(location.search);
+const orderUuid = params.get('uuid') || '';
+const d1 = document.getElementById('iDate');
+
+function fmtRp(n){return 'Rp ' + Number(n||0).toLocaleString('id-ID');}
+function esc(s){return String(s||'').replace(/[&<>"']/g,function(m){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]})}
+
+async function load(){
+  const msg = document.getElementById('msgBox');
+  if(!orderUuid){
+    msg.style.display='';document.getElementById('msgTitle').textContent='Kupon tidak ditemukan';
+    document.getElementById('msgBody').textContent='URL tidak valid (uuid missing).';return;
+  }
+  try{
+    const resp = await fetch('/api/orders/public?uuid=' + encodeURIComponent(orderUuid));
+    if(resp.status===404){throw {message:'Pesanan tidak ditemukan'};}
+    const d = await resp.json();
+    if(!d || !d.orderId) throw {message:'Data pesanan tidak valid'};
+    msg.style.display='none';
+
+    document.getElementById('iStore').textContent = d.storeName || '-';
+    document.getElementById('iStoreAddr').textContent = d.storeAddress || '';
+    document.getElementById('iRep').textContent = d.repName || '-';
+    document.getElementById('iOrder').textContent = d.orderId || '-';
+    const dt = d.createdAt ? new Date(d.createdAt) : null;
+    document.getElementById('iDate').textContent = dt ? dt.toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'}) + ' ' + dt.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'}) : '-';
+    document.getElementById('iCount').textContent = (d.itemCount||0) + ' pcs';
+    document.getElementById('iPay').textContent = d.paymentMethod === 'credit' ? 'Kredit' : (d.paymentMethod === 'cod' ? 'COD' : 'Tunai');
+    document.getElementById('fSubtotal').textContent = fmtRp(d.subtotal);
+    document.getElementById('fDiscount').textContent = '- ' + fmtRp(d.totalDiscount||0);
+    document.getElementById('fGrand').textContent = fmtRp(d.grandTotal);
+
+    if(d.status==='CONFIRMED'){document.getElementById('payBadge').textContent='CONFIRMED · UNPAID';document.getElementById('payBadge').className='badge badge-confirmed';}
+
+    const tb = document.getElementById('itemsBody');
+    const items = d.items||[];
+    if(!items.length){
+      tb.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#8e8ea0;padding:20px">Belum ada item</td></tr>';
+    } else {
+      tb.innerHTML = items.map(it=>{
+        const bonus = !!it.is_bonus;
+        const name = esc(it.name||it.sku||'');
+        const promo = it.promoName ? '<br><span style="font-size:11px;color:#0a7c42">' + esc(it.promoName) + '</span>' : '';
+        if(bonus){
+          return `<tr class="bonus"><td>${name} ${promo}</td><td class="num">+${it.qty}</td><td class="num">Gratiis</td><td class="num">Rp 0</td></tr>`;
+        }
+        const lineTotal = (it.qty||0)*(it.unitPrice||0);
+        return `<tr><td>${name}${promo}</td><td class="num">${it.qty}</td><td class="num">${fmtRp(it.unitPrice)}</td><td class="num">${fmtRp(lineTotal)}</td></tr>`;
+      }).join('');
+    }
+    document.getElementById('sheetBox').style.display='block';
+    document.getElementById('dlBar').style.display='block';
+  }catch(e){
+    msg.style.display='';
+    document.getElementById('msgTitle').textContent='Kupon tidak ditemukan';
+    document.getElementById('msgBody').textContent=(e&&e.message)||'Terjadi kesalahan memuat kupon.';
+  }
+}
+load();
+</script>
+</body>
+</html>

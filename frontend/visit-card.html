@@ -1,0 +1,1038 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>WIM Online — Kunjungan</title>
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<div class="app-shell">
+  <header class="app-header">
+    <div class="header-row">
+      <button class="back-btn" onclick="history.back()">←</button>
+      <h1>Kunjungan</h1>
+      <span style="width:36px;"></span>
+    </div>
+    <div class="subtitle">Kunjungan Sales — <span id="headerDate"></span></div>
+  </header>
+
+  <div class="main-content">
+    <!-- Filters -->
+    <div class="segment">
+      <button class="active" data-tab="belum" onclick="setVisitedTab('belum',this)">🕐 Belum Dikunjungi</button>
+      <button data-tab="sudah" onclick="setVisitedTab('sudah',this)">✅ Sudah Dikunjungi</button>
+    </div>
+    <div class="segment segment-sub" style="margin-top:6px;">
+      <button class="active" data-rfilter="all" onclick="filterRoute('all',this)">Semua</button>
+      <button data-rfilter="route" onclick="filterRoute('route',this)">Dalam Rute</button>
+      <button data-rfilter="luar_rute" onclick="filterRoute('luar_rute',this)">Luar Rute</button>
+    </div>
+
+    <!-- Store list -->
+    <div id="storeList"><div class="loading"><div class="spinner"></div></div></div>
+
+    <!-- Add Out-of-Route Store -->
+    <button class="btn btn-outline btn-block" onclick="openAddOutRouteStore()" style="margin:12px 0;">
+      ➕ Tambah Toko Luar Rute
+    </button>
+
+    <!-- Add Out-of-Route Store Modal -->
+    <div class="modal-overlay" id="addStoreModal" style="display:none;" onclick="if(event.target===this)closeAddStore()">
+      <div class="modal-content">
+        <div class="modal-title">Tambah Toko Luar Rute</div>
+        <div class="form-group">
+          <input class="form-input" id="addStoreSearch" placeholder="Cari nama toko..." oninput="searchAddStores()">
+        </div>
+        <div id="addStoreList" style="max-height:300px;overflow-y:auto;"></div>
+        <div style="height:8px;"></div>
+        <button class="btn btn-primary" id="btnAddSelected" onclick="confirmAddOutRouteStore()" disabled>✅ Tambahkan ke Daftar</button>
+        <div style="height:8px;"></div>
+        <button class="btn btn-outline" onclick="closeAddStore()">Batal</button>
+      </div>
+    </div>
+
+    <!-- Store Detail Modal -->
+    <div class="modal-overlay" id="storeModal" style="display:none;" onclick="if(event.target===this)closeModal()">
+      <div class="modal-content">
+        <div class="modal-title" id="modalStoreName">Toko</div>
+        <div class="store-address" id="modalStoreAddr" style="margin-bottom:12px;font-size:13px;color:var(--gray-400);"></div>
+
+        <!-- Order history (last 3 orders) -->
+        <div id="modalStoreOrders" style="display:none;margin-bottom:8px;"></div>
+
+        <div class="timer-display">
+          <div class="timer-number" id="visitTimer">3:00</div>
+          <div class="timer-label">Waktu minimum kunjungan</div>
+        </div>
+
+        <button class="btn btn-primary btn-block" id="btnCheckin" onclick="handleCheckin()">📍 Check-in di Toko</button>
+        <div style="height:8px;"></div>
+        <button class="btn btn-outline btn-block" onclick="handlePhoto()">🖼️ Foto Tambahan (Merchandise)</button>
+        <div style="height:8px;"></div>
+        <button class="btn btn-outline btn-block" onclick="handleStock()">📦 Input Stok</button>
+        <div style="height:8px;"></div>
+        <button class="btn btn-success btn-block" onclick="handleOrder()">🛒 Buat Pesanan</button>
+        <div style="height:8px;"></div>
+        <button class="btn btn-outline btn-block btn-sm" onclick="handleNoOrder()">❌ Tidak Ada Pesanan</button>
+        <div style="height:12px;"></div>
+        <button class="btn btn-success btn-lg btn-block" id="btnFinish" disabled onclick="handleFinish()">✅ Selesaikan Kunjungan</button>
+      </div>
+    </div>
+
+    <!-- Camera Modal (native camera app — rear/primary lens for the store exterior — multi-photo) -->
+    <div class="modal-overlay" id="cameraModal" style="display:none;" onclick="if(event.target===this)closeCamera()">
+      <div class="modal-content">
+        <div class="modal-title">Ambil Foto Kunjungan</div>
+        <div class="form-group">
+          <label class="form-label">Foto Toko (bisa lebih dari satu) *</label>
+          <div style="font-size:13px;color:var(--gray-400);text-align:center;margin-bottom:8px;">📷 Akan membuka kamera perangkat Anda (kamera utama/bela)</div>
+          <input type="file" id="camLiveFile" accept="image/*" capture="environment" style="display:none;">
+          <div style="display:flex;gap:8px;margin:8px 0;justify-content:center;">
+            <button class="btn btn-primary" id="btnCamCapture" onclick="useFilePicker()">📷 Ambil Foto</button>
+          </div>
+          <div id="photoStatus" style="font-size:12px;color:var(--gray-400);margin-top:4px;text-align:center;"></div>
+          <div id="photoThumbnails" style="margin-top:8px;"></div>
+        </div>
+        <button class="btn btn-primary btn-block" onclick="confirmPhotos()">✅ Selesai</button>
+        <div style="height:8px;"></div>
+        <button class="btn btn-outline btn-block" onclick="closeCamera()">Tutup</button>
+      </div>
+    </div>
+
+    <!-- Selfie modal (check-in selfie, separate from foto tambahan) — native FRONT camera app -->
+    <div class="modal-overlay" id="selfieModal" style="display:none;" onclick="if(event.target===this)closeSelfie()">
+      <div class="modal-content">
+        <div class="modal-title">🤳 Foto Selfie Check-in</div>
+        <div style="font-size:13px;color:var(--gray-400);text-align:center;margin-bottom:8px;">Silakan ambil selfie Anda untuk check-in</div>
+        <div class="form-group">
+          <div style="font-size:13px;color:var(--gray-400);text-align:center;margin-bottom:8px;">📷 Akan membuka kamera depan perangkat Anda</div>
+          <input type="file" id="selfieFileInput" accept="image/*" capture="user" style="display:none;">
+          <div style="display:flex;gap:8px;margin:8px 0;justify-content:center;">
+            <button class="btn btn-primary" id="btnSelfieCapture" onclick="useSelfieFilePicker()">🤳 Buka Kamera Depan</button>
+          </div>
+        </div>
+        <div style="height:8px;"></div>
+        <button class="btn btn-outline btn-block" onclick="closeSelfie()">Batal</button>
+      </div>
+    </div>
+
+    <!-- Stock Modal (SKU | Last Stock+Order | Input Stock) -->
+    <div class="modal-overlay" id="stockModal" style="display:none;" onclick="if(event.target===this)closeStock()">
+      <div class="modal-content">
+        <div class="modal-title">📦 Input Stok</div>
+        <div style="font-size:13px;color:var(--gray-400);margin-bottom:10px;" id="stockStoreName">Toko</div>
+        <div style="max-height:320px;overflow-y:auto;border:1px solid #eee;border-radius:8px;margin-bottom:8px;">
+          <table style="width:100%;border-collapse:collapse;font-size:13px;">
+            <thead>
+              <tr style="background:var(--gray-100);text-align:left;">
+                <th style="padding:8px 6px;">SKU</th>
+                <th style="padding:8px 6px;">Stok Terakhir + Order</th>
+                <th style="padding:8px 6px;text-align:center;">Input Stok</th>
+              </tr>
+            </thead>
+            <tbody id="stockTableBody"></tbody>
+          </table>
+        </div>
+        <div id="stockStatus" style="font-size:12px;color:var(--gray-400);margin-bottom:8px;"></div>
+        <button class="btn btn-primary btn-block" id="btnSaveStock" onclick="saveStockModal()">💾 Simpan Stok</button>
+        <div style="height:8px;"></div>
+        <button class="btn btn-outline btn-block" onclick="closeStock()">Tutup</button>
+      </div>
+    </div>
+
+    <!-- No Order Reason Modal -->
+    <div class="modal-overlay" id="noOrderModal" style="display:none;" onclick="if(event.target===this)closeNoOrder()">
+      <div class="modal-content">
+        <div class="modal-title">Alasan Tidak Ada Pesanan</div>
+        <div class="form-group">
+          <select class="form-select" id="noOrderReason" onchange="toggleLainnyaReason()">
+            <option value="">Pilih alasan...</option>
+            <option value="Stok masih penuh">Stok masih penuh</option>
+            <option value="Toko tutup">Toko tutup</option>
+            <option value="Pemilik tidak ada">Pemilik tidak ada</option>
+            <option value="Harga belum cocok">Harga belum cocok</option>
+            <option value="Lainnya">Lainnya (tulis sendiri)</option>
+          </select>
+        </div>
+        <div class="form-group" id="lainnyaReasonGroup" style="display:none;">
+          <label class="form-label">Tulis alasan *</label>
+          <textarea class="form-input" id="lainnyaReason" placeholder="Ketik alasan..."></textarea>
+        </div>
+        <button class="btn btn-primary btn-block" id="btnNoOrderSubmit" onclick="submitNoOrder()">Kirim</button>
+        <div style="height:8px;"></div>
+        <button class="btn btn-outline btn-block" onclick="closeNoOrder()">Batal</button>
+      </div>
+    </div>
+  </div>
+
+  <nav class="bottom-nav">
+    <a href="dashboard.html" ><span class="nav-icon">🏠</span>Beranda</a>
+    <a href="absensi.html" ><span class="nav-icon">⏰</span>Absensi</a>
+    <a href="visit-card.html" class="active"><span class="nav-icon">📋</span>Kunjungan</a>
+    <a href="noo.html" ><span class="nav-icon">➕</span>NOO</a>
+    <a href="report.html" ><span class="nav-icon">📊</span>Laporan</a>
+  </nav>
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/api.js"></script>
+<script src="js/app.js"></script>
+<script>
+const MIN_VISIT_SECONDS = 180;
+
+// ── Image compression before upload (prevents nginx 413 on large base64 photos) ──
+function compressImage(dataUrl, maxWidth = 900, quality = 0.62) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = function () {
+      let { width, height } = img;
+      if (width > maxWidth) {
+        height = Math.round(height * (maxWidth / width));
+        width = maxWidth;
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = width; canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, width, height);
+      try { resolve(canvas.toDataURL('image/jpeg', quality)); }
+      catch (e) { resolve(dataUrl); }
+    };
+    img.onerror = function () { resolve(dataUrl); };
+    img.src = dataUrl;
+  });
+}
+
+let currentStore = null;      // {id, name, addr, lat, lng, source, status}
+let currentTimer = null;
+let currentCheckinId = '';
+let currentCheckinPhoto = ''; // selfie taken at check-in (data URL)
+let checkinDone = false;
+let storePhotos = [];         // [{url, desc}] — foto tambahan (merchandise)
+let allStores = [];
+let storeMap = {};            // uuid -> store object (from allStores)
+let visitedTab = 'belum';
+let routeFilter = 'all';
+let activeVisit = null;       // {id, placeUuid, placeName, checkinAt, photos, ...} restored from server
+let lastOrdersByStore = {};   // placeUuid -> [orders]
+let stockHistory = [];        // last stock entries for current store (/api/stock GET)
+let stockCheckItems = [];     // items ready to POST to /api/stock
+
+document.addEventListener('DOMContentLoaded', async () => {
+  const user = await Session.checkOrRedirect();
+  if (!user) return;
+  document.getElementById('headerDate').textContent = new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  // Capture + persist the sales/user position on every page load/refresh, then
+  // re-render stores so ones within ~10m glow green.
+  let geoRan = false;
+  (async () => {
+    await WIM_Geo.track();
+    geoRan = true;
+    renderStores(visibleStores());
+  })();
+  await loadMyStores();
+  await loadActiveVisit();
+
+  // Check if returning from order creation
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('order_created') === '1') {
+    const lastOrder = sessionStorage.getItem('wim_last_order');
+    if (lastOrder) {
+      try {
+        const order = JSON.parse(lastOrder);
+        showToast('success', '✅ Pesanan berhasil!', 'ID: ' + (order.orderId || '') + ' — Rp ' + Number(order.grandTotal || 0).toLocaleString('id-ID'));
+        sessionStorage.removeItem('wim_last_order');
+      } catch(e) {}
+    }
+  }
+
+  if (activeVisit) {
+    showToast('info', 'Kunjungan aktif terdeteksi', 'Buka toko bersangkutan untuk melanjutkan atau selesaikan kunjungan.');
+  }
+});
+
+// ── Load & render stores
+async function loadMyStores() {
+  try {
+    allStores = await WIM_API.getMyStores();
+    renderStores(visibleStores());
+  } catch(e) {
+    document.getElementById('storeList').innerHTML = `<div class="alert alert-danger">Gagal memuat: ${e.message}</div>`;
+  }
+}
+
+function escapeHtml(v) {
+  return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+function renderStores(stores) {
+  const el = document.getElementById('storeList');
+  storeMap = {};
+  stores.forEach(s => { storeMap[s.uuid || s.id] = s; });
+  if (stores.length === 0) {
+    el.innerHTML = `<div class="empty-state"><div class="empty-icon">📋</div><p>Tidak ada toko dalam daftar</p></div>`;
+    return;
+  }
+  el.innerHTML = stores.map(s => {
+    const uuid = s.uuid || s.id;
+    const initial = (s.name || 'T').charAt(0);
+    const isDone = s.status === 'completed' || s.status === 'visited';
+    const isActive = !!activeVisit && activeVisit.placeUuid === uuid;
+    const routeBadge = s.source === 'luar_rute'
+      ? '<span class="badge badge-warning">📍 Luar Rute</span>'
+      : '<span class="badge badge-success">📍 Dalam Rute</span>';
+    let statusBadges = '';
+    if (isDone) statusBadges += '<span class="badge badge-gray">✅ Selesai</span>';
+    if (isActive) statusBadges += '<span class="badge badge-info">🕐 Sedang Dikunjungi</span>';
+    let cardBg = '';
+    if (isActive) cardBg = 'background:var(--blue-50);';
+    const statusIcon = isDone ? '✅' : (isActive ? '🕐' : '');
+    const inRange = WIM_Geo && WIM_Geo.inRange ? WIM_Geo.inRange(s) : false;
+    const rangeBadge = inRange ? '<span class="badge badge-success" style="background:#d4f5e2;color:#0a7c42">🟢 Dalam Jangkauan ≤10m</span>' : '';
+    if (inRange && !cardBg) cardBg = 'background:#eafaf0;box-shadow:0 0 0 2px #2eb872;';
+    return `<div class="store-item ${inRange ? 'in-range' : ''}" style="${cardBg}" onclick="openStore('${uuid}')">
+      <div class="store-icon" style="${inRange ? 'background:#2eb872;color:#fff;' : ''}">${statusIcon || initial}</div>
+      <div class="store-info">
+        <div class="store-name">${escapeHtml(s.name)}</div>
+        <div class="store-address">${escapeHtml(s.city || '')}</div>
+        <div class="store-meta">${routeBadge}${rangeBadge}${statusBadges}</div>
+      </div>
+      <span style="color:var(--gray-300);font-size:18px;">›</span>
+    </div>`;
+  }).join('');
+}
+
+function isStoreDone(s) {
+  return s.status === 'completed' || s.status === 'visited';
+}
+
+function visibleStores() {
+  let list = allStores;
+  // Belum/Sudah dikunjungi tab
+  list = visitedTab === 'sudah' ? allStores.filter(isStoreDone) : allStores.filter(s => !isStoreDone(s));
+  // route filter (within the active tab)
+  if (routeFilter !== 'all') list = list.filter(s => s.source === routeFilter);
+  return list;
+}
+
+function setVisitedTab(tab, btn) {
+  visitedTab = tab;
+  document.querySelectorAll('.segment button[data-tab]').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderStores(visibleStores());
+}
+
+function filterRoute(rf, btn) {
+  routeFilter = rf;
+  document.querySelectorAll('.segment-sub button').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderStores(visibleStores());
+}
+
+// ── Active visit restore (server check-in state survives refresh)
+async function loadActiveVisit() {
+  activeVisit = null;
+  let visit = null;
+  try {
+    const resp = await fetch('/api/visits/active', { credentials: 'same-origin' });
+    if (resp.ok) {
+      const data = await resp.json();
+      visit = data.active || null;
+      if (!visit && Array.isArray(data.visits)) visit = data.visits.find(v => !v.checkoutAt) || null;
+    }
+  } catch(e) { /* endpoint may not exist yet — fall back below */ }
+  if (!visit) {
+    try {
+      const visits = await WIM_API.getVisits(); // today's visits
+      visit = (visits || []).find(v => !v.checkoutAt) || null;
+    } catch(e) {}
+  }
+  if (visit && visit.placeUuid) {
+    activeVisit = visit;
+    if (allStores.length) renderStores(visibleStores());
+  }
+}
+
+// ── Store detail modal
+function openStore(uuid) {
+  const s = storeMap[uuid];
+  if (!s) return;
+  const isDone = s.status === 'completed' || s.status === 'visited';
+
+  currentStore = { id: s.uuid || s.id, name: s.name, addr: s.address || '', lat: s.latitude, lng: s.longitude, source: s.source, status: s.status };
+  checkinDone = false;
+  currentCheckinId = '';
+  storePhotos = [];
+  stockCheckItems = [];
+  stockHistory = [];
+  if (currentTimer) currentTimer.stop();
+  currentTimer = null;
+
+  const elTimer = document.getElementById('visitTimer');
+  const btnFinish = document.getElementById('btnFinish');
+  const btnCheckin = document.getElementById('btnCheckin');
+  btnFinish.disabled = true;
+  btnCheckin.disabled = false;
+  btnCheckin.textContent = '📍 Check-in di Toko';
+  btnCheckin.className = 'btn btn-primary btn-block';
+  elTimer.textContent = '⏱ Mulai setelah check-in';
+  elTimer.className = 'timer-number';
+  elTimer.style.color = '';
+
+  document.getElementById('modalStoreName').textContent = s.name;
+  document.getElementById('modalStoreAddr').textContent = s.address || 'Alamat tidak tersedia';
+  document.getElementById('storeModal').style.display = 'flex';
+
+  loadStoreOrders(uuid);
+  loadStockCheck(uuid);
+
+  // DB-authoritative: ask the server for THIS store's open visit (if any).
+  // This restores check-in state + timer after reload / page navigation, so the
+  // UI can never drift from reality (e.g. rebuilding after a 413 left the DB with
+  // a live check-in while the frontend showed "not checked in"). It also wins over
+  // a plan-'visited' label: if a live check-in exists, show it (not "Selesai").
+  loadActiveVisitFor(currentStore.id).then(v => {
+    if (v && v.place_uuid === currentStore.id) {
+      activeVisit = v;
+      restoreCheckinState();
+      renderStores(visibleStores());
+    } else if (isDone) {
+      // No live open visit and the plan already marks it visited.
+      checkinDone = true;
+      btnCheckin.disabled = true;
+      btnCheckin.textContent = '✅ Selesai Dikunjungi';
+      btnCheckin.className = 'btn btn-outline btn-block';
+      elTimer.textContent = 'Selesai ✅';
+      elTimer.className = 'timer-number timer-done';
+    } else {
+      activeVisit = null;
+    }
+  });
+}
+
+// Fetch the open (not-checked-out) visit for a specific store, or null.
+async function loadActiveVisitFor(placeUuid) {
+  try {
+    const resp = await fetch('/api/visits/active?place_uuid=' + encodeURIComponent(placeUuid), { credentials: 'same-origin' });
+    if (resp.ok) {
+      const data = await resp.json();
+      return data.active && data.active.place_uuid === placeUuid ? data.active : null;
+    }
+  } catch (e) {}
+  return null;
+}
+
+function closeModal() {
+  document.getElementById('storeModal').style.display = 'none';
+  if (currentTimer) currentTimer.stop();
+}
+
+function restoreCheckinState() {
+  if (!activeVisit) return;
+  checkinDone = true;
+  currentCheckinId = activeVisit.id || activeVisit.visitId || '';
+  const btnCheckin = document.getElementById('btnCheckin');
+  btnCheckin.disabled = true;
+  btnCheckin.textContent = '✅ Check-in Berhasil';
+  btnCheckin.className = 'btn btn-success btn-block';
+  // Restore photos if the server saved any (desc not persisted server-side)
+  try {
+    const arr = JSON.parse(activeVisit.photos || '[]');
+    storePhotos = (Array.isArray(arr) ? arr : []).map(p => typeof p === 'string' ? { url: p, desc: '' } : { url: p.url || '', desc: p.desc || '' }).filter(p => p.url);
+  } catch(e) { storePhotos = []; }
+  // Timer restored from server checkin_at
+  const t = parseServerDatetime(activeVisit.checkinAt);
+  const elapsed = t ? (Date.now() - t.getTime()) / 1000 : 0;
+  startVisitTimer(Math.max(0, MIN_VISIT_SECONDS - elapsed));
+}
+
+// ── Check-in & timer
+async function handleCheckin() {
+  if (!currentStore) return;
+  const btn = document.getElementById('btnCheckin');
+  btn.disabled = true;
+  btn.textContent = '🤳 Ambil Selfie...';
+  try {
+    // 1) Capture the check-in SELFIE first (separate from foto tambahan / merchandise)
+    const selfie = await captureSelfie();
+    // 2) Send the salesperson's ACTUAL GPS position (so geofence validates), + the selfie
+    const geo = (typeof WIM_Geo !== 'undefined' && (WIM_Geo.lastPosition || await WIM_Geo.capture())) || {};
+    const lat = (geo.latitude != null) ? geo.latitude : null;
+    const lng = (geo.longitude != null) ? geo.longitude : null;
+    const result = await WIM_API.visitCheckin(currentStore.id, currentStore.name, lat, lng, currentStore.source || 'route', selfie);
+    currentCheckinId = result.visitId || result.id || '';
+    if (selfie) currentCheckinPhoto = selfie;
+    btn.textContent = '✅ Check-in Berhasil';
+    btn.className = 'btn btn-success btn-block';
+    btn.disabled = true;
+    checkinDone = true;
+    activeVisit = { id: currentCheckinId, placeUuid: currentStore.id, placeName: currentStore.name, checkinAt: serverNowString(), photos: '[]' };
+    // Timer starts NOW — when check-in is confirmed
+    startVisitTimer(MIN_VISIT_SECONDS);
+    renderStores(visibleStores());
+    // After selfie, the selfie modal already closed. Foto-tambahan is a separate button.
+    showToast('success', 'Check-in berhasil', 'Selfie sudah diambil. Silakan lanjut kunjungan / foto tambahan.');
+  } catch(e) {
+    btn.disabled = false;
+    btn.textContent = '📍 Check-in di Toko';
+    // If the server says we're already checked in (409, e.g. a previous attempt wrote
+    // the visit but the response was lost / page reloaded), adopt the DB state instead
+    // of leaving the user stuck.
+    const is409 = /409/.test(String(e && e.message));
+    if (is409) {
+      try {
+        const v = await loadActiveVisitFor(currentStore.id);
+        if (v && v.place_uuid === currentStore.id) {
+          activeVisit = v;
+          currentCheckinId = v.id || '';
+          checkinDone = true;
+          btn.disabled = true;
+          btn.textContent = '✅ Check-in Berhasil';
+          btn.className = 'btn btn-success btn-block';
+          restoreCheckinState();
+          renderStores(visibleStores());
+          showToast('success', 'Sudah check-in', 'Status aktif dipulihkan dari server.');
+          return;
+        }
+      } catch (e2) {}
+    }
+    showToast('error', 'Gagal check-in', e.message);
+  }
+}
+
+// ── Selfie capture (check-in) — native FRONT-face camera via the phone's camera app.
+//    The phone's built-in camera app is far more compatible than a custom
+//    getUserMedia preview + shutter (which needs HTTPS/localhost and could pick
+//    the rear camera). <input type="file" accept="image/*" capture="user"> always
+//    opens the front/selfie camera on mobile, and a normal file picker on desktop.
+function openSelfie() { document.getElementById('selfieModal').style.display = 'flex'; }
+function closeSelfie() {
+  document.getElementById('selfieModal').style.display = 'none';
+  // Cancel the pending selfie so the check-in isn't left hanging on the disabled button.
+  if (typeof window.__selfieResolve === 'function') {
+    try { window.__selfieResolve(''); window.__selfieResolve = null; } catch (e) {}
+  }
+}
+function captureSelfie() {
+  return new Promise((resolve) => {
+    window.__selfieResolve = resolve;
+    openSelfie();
+  });
+}
+function useSelfieFilePicker() {
+  const fi = document.getElementById('selfieFileInput');
+  fi.accept = 'image/*';
+  fi.capture = 'user'; // front (selfie) camera — native camera app on mobile
+  fi.onchange = null;
+  fi.onchange = function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(ev) {
+      const dataUrl = ev.target.result;
+      compressImage(dataUrl).then(compressed => {
+        const resolve = window.__selfieResolve; window.__selfieResolve = null;
+        fi.value = '';
+        document.getElementById('selfieModal').style.display = 'none';
+        if (typeof resolve === 'function') { try { resolve(compressed); } catch (e) {} }
+      });
+    };
+    reader.readAsDataURL(file);
+  };
+  fi.click();
+}
+
+function startVisitTimer(startRemaining) {
+  if (currentTimer) currentTimer.stop();
+  currentTimer = null;
+  const el = document.getElementById('visitTimer');
+  const remaining = Math.max(0, Math.min(MIN_VISIT_SECONDS, Math.round(startRemaining)));
+  if (remaining <= 0) {
+    el.textContent = 'Selesai ✅';
+    el.className = 'timer-number timer-done';
+    if (checkinDone) document.getElementById('btnFinish').disabled = false;
+    return;
+  }
+  el.textContent = formatTime(remaining);
+  el.className = 'timer-number';
+  currentTimer = new VisitTimer(remaining, (r) => {
+    el.textContent = formatTime(r);
+    if (r <= 30) el.style.color = '#dc3545';
+    else if (r <= 60) el.style.color = '#e67e22';
+    else el.style.color = 'var(--green)';
+  }, () => {
+    el.textContent = 'Selesai ✅';
+    el.className = 'timer-number timer-done';
+    if (checkinDone) document.getElementById('btnFinish').disabled = false;
+    if (navigator.vibrate) navigator.vibrate(200);
+  });
+  currentTimer.total = MIN_VISIT_SECONDS;
+  currentTimer.remaining = remaining;
+  currentTimer.start();
+}
+
+function currentDurationSeconds() {
+  // Prefer the server checkin_at so duration survives refresh
+  if (activeVisit && activeVisit.checkinAt) {
+    const t = parseServerDatetime(activeVisit.checkinAt);
+    if (t) return Math.max(0, Math.round((Date.now() - t.getTime()) / 1000));
+  }
+  if (currentTimer) return Math.max(0, currentTimer.total - currentTimer.remaining);
+  return 0;
+}
+
+// ── Camera (store photos) — native camera app on the phone (rear/primary lens for the store exterior).
+//    Replaces the old getUserMedia live preview + shutter with <input type="file"
+//    accept="image/*" capture="environment">, which opens the built-in camera app directly.
+function handlePhoto() {
+  // Don't reset storePhotos if they exist (restored from server active visit)
+  if (storePhotos.length === 0 && activeVisit && activeVisit.photos) {
+    try {
+      const arr = JSON.parse(String(activeVisit.photos));
+      if (Array.isArray(arr) && arr.length) {
+        storePhotos = arr.map(p => typeof p === 'string' ? { url: p, desc: '' } : { url: p.url || '', desc: p.desc || '' }).filter(p => p.url);
+      }
+    } catch(e) {}
+  }
+  document.getElementById('photoStatus').textContent = storePhotos.length ? '✅ ' + storePhotos.length + ' foto' : '';
+  document.getElementById('photoStatus').style.color = storePhotos.length ? 'var(--green)' : '';
+  renderPhotoThumbnails();
+  document.getElementById('cameraModal').style.display = 'flex';
+}
+
+function useFilePicker() {
+  const fi = document.getElementById('camLiveFile');
+  fi.accept = 'image/*';
+  fi.capture = 'environment'; // rear/primary camera — for the store exterior photo
+  fi.onchange = null;
+  fi.onchange = function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(ev) {
+      compressImage(ev.target.result).then(compressed => {
+        storePhotos.push({ url: compressed, desc: '' });
+        renderPhotoThumbnails();
+        const st = document.getElementById('photoStatus');
+        st.textContent = '✅ ' + storePhotos.length + ' foto diambil';
+        st.style.color = 'var(--green)';
+      });
+    };
+    reader.readAsDataURL(file);
+    fi.value = '';
+  };
+  fi.click();
+}
+
+function renderPhotoThumbnails() {
+  const el = document.getElementById('photoThumbnails');
+  if (storePhotos.length === 0) { el.innerHTML = ''; return; }
+  el.innerHTML = storePhotos.map((p, i) => `
+    <div style="display:flex;align-items:center;gap:8px;margin:8px 0;">
+      <img src="${p.url}" alt="Foto ${i + 1}" style="width:56px;height:56px;object-fit:cover;border-radius:6px;flex-shrink:0;border:1px solid #ddd;">
+      <input class="form-input" style="flex:1;font-size:13px;" placeholder="Keterangan foto ${i + 1} (opsional)" value="${escapeAttr(p.desc)}" data-photo-idx="${i}" oninput="updatePhotoDesc(this)">
+      <button type="button" onclick="removePhoto(${i})" style="background:none;border:none;color:#dc3545;font-size:18px;cursor:pointer;flex-shrink:0;">✕</button>
+    </div>`).join('');
+}
+
+function updatePhotoDesc(input) {
+  const i = parseInt(input.getAttribute('data-photo-idx'), 10);
+  if (storePhotos[i]) storePhotos[i].desc = input.value;
+}
+
+function removePhoto(idx) {
+  storePhotos.splice(idx, 1);
+  renderPhotoThumbnails();
+  const st = document.getElementById('photoStatus');
+  st.textContent = storePhotos.length ? '✅ ' + storePhotos.length + ' foto diambil' : '';
+  st.style.color = storePhotos.length ? 'var(--green)' : '';
+}
+
+function confirmPhotos() {
+  if (storePhotos.length === 0) {
+    showToast('warning', 'Ambil foto dulu!', 'Minimal 1 foto kunjungan');
+    return;
+  }
+  closeCamera();
+}
+
+function closeCamera() {
+  document.getElementById('cameraModal').style.display = 'none';
+  const fi = document.getElementById('camLiveFile');
+  fi.value = '';
+}
+
+// ── Stock (modal table: SKU | Last Stock+Order | Input Stock)
+async function handleStock() {
+  if (!currentStore) return;
+  document.getElementById('stockStoreName').textContent = currentStore.name;
+  document.getElementById('stockTableBody').innerHTML = '<tr><td colspan="3" style="text-align:center;padding:16px;color:var(--gray-400);">Memuat data...</td></tr>';
+  document.getElementById('stockStatus').textContent = '';
+  document.getElementById('stockModal').style.display = 'flex';
+  await loadStockCheck(currentStore.id);
+  renderStockTable();
+}
+
+async function loadStockCheck(placeUuid) {
+  try {
+    const resp = await fetch('/api/stock?place_uuid=' + encodeURIComponent(placeUuid), { credentials: 'same-origin' });
+    const data = await resp.json();
+    stockHistory = data.items || [];
+  } catch(e) { stockHistory = []; }
+}
+
+function renderStockTable() {
+  const body = document.getElementById('stockTableBody');
+  const skus = collectStockSkus();
+  if (skus.length === 0) {
+    body.innerHTML = '<tr><td colspan="3" style="text-align:center;padding:16px;color:var(--gray-400);">Tidak ada SKU</td></tr>';
+    return;
+  }
+  const lastOrder = (lastOrdersByStore[currentStore.id] || [])[0] || null;
+  body.innerHTML = skus.map(s => {
+    const last = lastStockFor(s.sku);
+    const lastStockCell = last
+      ? '<div style="color:var(--gray-700);">Stok: <b>' + last.qty + ' karton</b></div><div style="color:var(--gray-400);font-size:11px;">' + String(last.checkedAt || '').slice(0, 16).replace('T', ' ') + '</div>'
+      : '<div style="color:var(--gray-400);">Belum ada data</div>';
+    const orderCell = lastOrder
+      ? '<div style="color:var(--gray-600);">Order: <b>' + (lastOrder.orderId || (lastOrder.uuid ? lastOrder.uuid.slice(0, 8) : '-')) + '</b></div>' + (lastOrder.total ? '<div style="color:var(--gray-400);font-size:11px;">Rp ' + Number(lastOrder.total).toLocaleString('id-ID') + '</div>' : '')
+      : '<div style="color:var(--gray-400);">—</div>';
+    return '<tr style="border-bottom:1px solid #eee;">' +
+      '<td style="padding:8px 6px;vertical-align:top;"><div style="font-weight:600;font-size:13px;">' + s.name + '</div><div style="font-size:11px;color:var(--gray-400);">' + s.sku + '</div></td>' +
+      '<td style="padding:8px 6px;vertical-align:top;font-size:12px;">' + lastStockCell + orderCell + '</td>' +
+      '<td style="padding:8px 6px;vertical-align:top;"><input type="number" min="0" max="9999" step="1" value="' + (last ? last.qty : '') + '" placeholder="0" data-sku="' + s.sku + '" oninput="markStockDirty(this)" style="width:70px;padding:6px;border:1px solid #ddd;border-radius:6px;text-align:center;font-size:14px;"></td>' +
+      '</tr>';
+  }).join('');
+  document.getElementById('stockStatus').textContent = '';
+}
+
+// Default top SKUs for quick stock check
+const DEFAULT_STOCK_SKUS = [
+  {sku: 'SQA-PET-550', name: 'PET 550ML'},
+  {sku: 'SQA-PET-220', name: 'PET 220ML'},
+  {sku: 'SQA-CUP-120', name: 'CUP 120ML'},
+  {sku: 'SQA-GALON-19L', name: 'GALON 19L'},
+  {sku: 'LEVONTE-CUP', name: 'LEVONTE CUP'},
+];
+
+function collectStockSkus() {
+  const out = [];
+  const seen = new Set();
+  DEFAULT_STOCK_SKUS.forEach(s => { if (!seen.has(s.sku)) { seen.add(s.sku); out.push({ sku: s.sku, name: s.name }); } });
+  (stockHistory || []).forEach(i => { if (i.sku && !seen.has(i.sku)) { seen.add(i.sku); out.push({ sku: i.sku, name: i.sku }); } });
+  return out;
+}
+
+function lastStockFor(sku) {
+  const entries = (stockHistory || []).filter(i => i.sku === sku);
+  if (!entries.length) return null;
+  entries.sort((a, b) => String(b.checkedAt || '').localeCompare(String(a.checkedAt || '')));
+  return entries[0];
+}
+
+function markStockDirty(input) {
+  const sku = input.getAttribute('data-sku');
+  const qty = input.value.trim();
+  const idx = stockCheckItems.findIndex(i => i.sku === sku);
+  if (qty !== '' && !isNaN(parseInt(qty, 10)) && parseInt(qty, 10) >= 0) {
+    const rec = { sku: sku, qty: parseInt(qty, 10) };
+    if (idx >= 0) stockCheckItems[idx] = rec;
+    else stockCheckItems.push(rec);
+  } else if (idx >= 0) {
+    stockCheckItems.splice(idx, 1);
+  }
+}
+
+async function saveStockModal() {
+  document.querySelectorAll('#stockTableBody input[data-sku]').forEach(inp => markStockDirty(inp));
+  if (stockCheckItems.length === 0) {
+    showToast('warning', 'Isi minimal satu stok', 'Masukkan jumlah stok terlebih dahulu');
+    return;
+  }
+  const btn = document.getElementById('btnSaveStock');
+  btn.disabled = true;
+  btn.textContent = '⏳ Menyimpan...';
+  try {
+    await fetch('/api/stock', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({place_uuid: currentStore.id, items: stockCheckItems})
+    });
+    document.getElementById('stockStatus').textContent = '✅ Stok berhasil disimpan';
+    document.getElementById('stockStatus').style.color = 'var(--green)';
+    showToast('success', 'Stok disimpan', stockCheckItems.length + ' SKU dicatat');
+    setTimeout(() => { document.getElementById('stockModal').style.display = 'none'; }, 600);
+  } catch(e) {
+    document.getElementById('stockStatus').textContent = '❌ Gagal menyimpan: ' + e.message;
+    document.getElementById('stockStatus').style.color = '#dc3545';
+    showToast('error', 'Gagal simpan stok', e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '💾 Simpan Stok';
+  }
+}
+
+function closeStock() {
+  document.getElementById('stockModal').style.display = 'none';
+}
+
+// ── Order flow
+function handleOrder() {
+  if (!checkinDone) { showToast('warning', 'Check-in dulu!', ''); return; }
+  const store = currentStore;
+  if (!store) { showToast('error', 'Toko tidak diketahui', ''); return; }
+  const srcParam = store.source ? `&src=${encodeURIComponent(store.source)}` : '';
+  location.href = `order.html?store=${encodeURIComponent(store.id)}&name=${encodeURIComponent(store.name || '')}&checkin=${encodeURIComponent(currentCheckinId || '')}${srcParam}`;
+}
+
+// ── No order
+function handleNoOrder() {
+  if (!checkinDone) { showToast('warning', 'Check-in dulu!', 'Lakukan check-in sebelum mencatat kunjungan'); return; }
+  document.getElementById('noOrderReason').value = '';
+  document.getElementById('lainnyaReason').value = '';
+  document.getElementById('lainnyaReasonGroup').style.display = 'none';
+  document.getElementById('noOrderModal').style.display = 'flex';
+}
+
+function toggleLainnyaReason() {
+  const val = document.getElementById('noOrderReason').value;
+  document.getElementById('lainnyaReasonGroup').style.display = val === 'Lainnya' ? 'block' : 'none';
+}
+
+function closeNoOrder() {
+  document.getElementById('noOrderModal').style.display = 'none';
+}
+
+async function submitNoOrder() {
+  let reason = document.getElementById('noOrderReason').value;
+  if (reason === 'Lainnya') {
+    reason = document.getElementById('lainnyaReason').value.trim();
+    if (!reason) { showToast('warning', 'Tulis alasan', ''); return; }
+  }
+  if (!reason) { showToast('warning', 'Pilih alasan', ''); return; }
+  if (!checkinDone || !currentStore) { showToast('warning', 'Check-in dulu!', 'Lakukan check-in sebelum mencatat kunjungan'); return; }
+
+  const btn = document.getElementById('btnNoOrderSubmit');
+  btn.disabled = true;
+  btn.textContent = '⏳ Menyimpan...';
+  try {
+    const photos = JSON.stringify(storePhotos.map(p => p.url));
+    const notes = 'No order: ' + reason + photoDescNotes();
+    await WIM_API.visitCheckout(currentStore.id, currentStore.name, photos, notes, currentDurationSeconds(), 'no_order');
+    activeVisit = null;
+    if (currentTimer) currentTimer.stop();
+    currentTimer = null;
+    closeNoOrder();
+    closeModal();
+    showToast('success', '✅ Kunjungan tanpa pesanan dicatat');
+    await loadMyStores();
+  } catch(e) {
+    btn.disabled = false;
+    btn.textContent = 'Kirim';
+    showToast('error', 'Gagal', e.message);
+  }
+}
+
+// ── Finish visit
+async function handleFinish() {
+  if (!checkinDone || !currentStore) { showToast('warning', 'Check-in dulu!', 'Silakan check-in sebelum menyelesaikan kunjungan'); return; }
+  if (currentTimer && !currentTimer.isDone && currentTimer.remaining > 0) {
+    showToast('warning', 'Tunggu timer', 'Minimal kunjungan 3 menit. ' + currentTimer.formatted + ' tersisa');
+    return;
+  }
+
+  if (!confirm('✅ Selesaikan kunjungan ke ' + (currentStore.name || 'toko ini') + '?')) return;
+
+  const btn = document.getElementById('btnFinish');
+  btn.disabled = true;
+  btn.textContent = '⏳ Menyimpan...';
+  try {
+    const photos = JSON.stringify(storePhotos.map(p => p.url));
+    const notes = 'Selesai Kunjungan' + photoDescNotes();
+    await WIM_API.visitCheckout(currentStore.id, currentStore.name, photos, notes, currentDurationSeconds(), 'visited');
+    activeVisit = null;
+    if (currentTimer) currentTimer.stop();
+    currentTimer = null;
+    showToast('success', '✅ Kunjungan selesai!');
+    closeModal();
+    await loadMyStores();
+  } catch(e) {
+    btn.disabled = false;
+    btn.textContent = '✅ Selesaikan Kunjungan';
+    showToast('error', 'Gagal', e.message);
+  }
+}
+
+// ── Store order history
+async function loadStoreOrders(placeUuid) {
+  try {
+    const resp = await fetch('/api/stores/orders?place_uuid=' + encodeURIComponent(placeUuid), { credentials: 'same-origin' });
+    const data = await resp.json();
+    lastOrdersByStore[placeUuid] = data.orders || [];
+  } catch(e) {
+    lastOrdersByStore[placeUuid] = [];
+  }
+  const el = document.getElementById('modalStoreOrders');
+  const orders = lastOrdersByStore[placeUuid] || [];
+  if (orders.length > 0) {
+    el.innerHTML = '<div style="margin:8px 0;font-size:12px;color:var(--gray-400);">📋 Riwayat Pesanan</div>' +
+      '<table style="width:100%;border-collapse:collapse;font-size:12px;border:1px solid #ddd;border-radius:6px;">' +
+      '<thead><tr style="background:#f8f9fa;">' +
+      '<th style="padding:6px 8px;text-align:left;border-bottom:1px solid #ddd;">ID</th>' +
+      '<th style="padding:6px 8px;text-align:left;border-bottom:1px solid #ddd;">Status</th>' +
+      '<th style="padding:6px 8px;text-align:right;border-bottom:1px solid #ddd;">Total</th>' +
+      '</tr></thead><tbody>' +
+      orders.map(o => '<tr>' +
+        '<td style="padding:6px 8px;border-bottom:1px solid #eee;">' + (o.orderId || (o.uuid ? o.uuid.slice(0, 8) : '-')) + '</td>' +
+        '<td style="padding:6px 8px;border-bottom:1px solid #eee;">' + (o.status || '-') + '</td>' +
+        '<td style="padding:6px 8px;border-bottom:1px solid #eee;text-align:right;">' + (o.total ? 'Rp ' + Number(o.total).toLocaleString('id-ID') : '-') + '</td>' +
+        '</tr>').join('') +
+      '</tbody></table>';
+    el.style.display = 'block';
+  } else {
+    el.style.display = 'none';
+  }
+}
+
+// ── Small helpers
+function formatTime(secs) {
+  const m = Math.floor(secs / 60);
+  const s = secs % 60;
+  return m + ':' + String(s).padStart(2, '0');
+}
+
+function parseServerDatetime(s) {
+  if (!s) return null;
+  const d = new Date(String(s).includes('T') ? s : String(s).replace(' ', 'T'));
+  return isNaN(d.getTime()) ? null : d;
+}
+
+function serverNowString() {
+  const d = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
+}
+
+function escapeAttr(v) {
+  return String(v == null ? '' : v).replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function photoDescNotes() {
+  const descs = storePhotos.map((p, i) => p.desc ? ('Foto ' + (i + 1) + ': ' + p.desc) : '').filter(Boolean);
+  return descs.length ? ' | ' + descs.join('; ') : '';
+}
+
+// ── Toast notification system
+function showToast(type, title, message) {
+  const existing = document.querySelector('.toast-container');
+  if (!existing) {
+    const container = document.createElement('div');
+    container.className = 'toast-container';
+    container.style.cssText = 'position:fixed;bottom:80px;left:16px;right:16px;z-index:9999;display:flex;flex-direction:column;gap:8px;pointer-events:none;';
+    document.body.appendChild(container);
+  }
+  const container = document.querySelector('.toast-container');
+  const toast = document.createElement('div');
+  const colors = {success: '#28a745', error: '#dc3545', warning: '#e67e22', info: '#17a2b8'};
+  const icons = {success: '✅', error: '❌', warning: '⚠️', info: 'ℹ️'};
+  toast.style.cssText = 'background:#fff;border-left:4px solid ' + (colors[type] || '#6c757d') + ';border-radius:8px;padding:12px 16px;box-shadow:0 4px 12px rgba(0,0,0,0.15);pointer-events:auto;animation:slideIn 0.3s ease;max-width:400px;margin:0 auto;width:100%;';
+  toast.innerHTML = '<div style="font-weight:600;font-size:14px;margin-bottom:2px;">' + (icons[type] || '') + ' ' + title + '</div>' + (message ? '<div style="font-size:12px;color:var(--gray-400);">' + message + '</div>' : '') + '<div style="margin-top:8px;"><button onclick="this.parentElement.parentElement.remove()" style="background:none;border:none;color:var(--gray-400);font-size:12px;cursor:pointer;">✕ Tutup</button></div>';
+  container.appendChild(toast);
+  setTimeout(() => { if (toast.parentElement) toast.remove(); }, 5000);
+}
+
+// ── Luar Rute: Tambah Toko
+let addOutRouteSelected = null;
+let allPlaces = [];
+
+async function openAddOutRouteStore() {
+  addOutRouteSelected = null;
+  document.getElementById('btnAddSelected').disabled = true;
+  document.getElementById('addStoreSearch').value = '';
+  document.getElementById('addStoreModal').style.display = 'flex';
+  document.getElementById('addStoreList').innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+  try {
+    allPlaces = await WIM_API.getAllStores();
+    renderAddStoreList(allPlaces);
+  } catch(e) {
+    document.getElementById('addStoreList').innerHTML = `<div class="alert alert-danger">Gagal memuat toko</div>`;
+  }
+}
+
+// Debounce timer for search
+let searchDebounce = null;
+
+function closeAddStore() {
+  document.getElementById('addStoreModal').style.display = 'none';
+}
+
+async function searchAddStores() {
+  if (searchDebounce) clearTimeout(searchDebounce);
+  searchDebounce = setTimeout(async () => {
+    const q = document.getElementById('addStoreSearch').value;
+    if (q.length < 1) {
+      renderAddStoreList(allPlaces);
+      return;
+    }
+    document.getElementById('addStoreList').innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+    try {
+      const results = await WIM_API.getAllStores(q);
+      renderAddStoreList(results);
+    } catch(e) {
+      document.getElementById('addStoreList').innerHTML = '<div class="alert alert-danger">Gagal mencari</div>';
+    }
+  }, 300);
+}
+
+function renderAddStoreList(stores) {
+  const el = document.getElementById('addStoreList');
+  if (stores.length === 0) {
+    el.innerHTML = `<div class="empty-state"><p>Tidak ada toko tersedia</p></div>`;
+    return;
+  }
+  el.innerHTML = stores.map(p => {
+    const initial = (p.name || 'T').charAt(0);
+    const inPlan = p.inPlan;
+    const disabled = inPlan ? 'style="opacity:0.5;cursor:default;"' : 'style="cursor:pointer;"';
+    const statusBadge = inPlan ? '<span class="badge badge-gray">Sudah ada</span>' : '';
+    return `<div class="store-item" ${disabled} onclick="${inPlan ? '' : `selectAddStore('${p.uuid}','${p.name.replace(/'/g, "\\'")}')`}" data-store-id="${p.uuid}">
+      <div class="store-icon">${initial}</div>
+      <div class="store-info">
+        <div class="store-name">${escapeHtml(p.name)}</div>
+        <div class="store-address">${escapeHtml(p.city || '')}</div>
+        <div class="store-meta">${statusBadge}</div>
+      </div>
+      <div class="store-status" style="font-size:18px;">${inPlan ? '✓' : '○'}</div>
+    </div>`;
+  }).join('');
+}
+
+function selectAddStore(id, name) {
+  document.querySelectorAll('#addStoreList .store-item').forEach(el => {
+    el.style.background = '';
+    el.querySelector('.store-status').textContent = '○';
+  });
+  const el = document.querySelector(`[data-store-id="${id}"]`);
+  if (el) {
+    el.style.background = 'var(--blue-50)';
+    el.querySelector('.store-status').textContent = '●';
+  }
+  addOutRouteSelected = { id, name };
+  document.getElementById('btnAddSelected').disabled = false;
+}
+
+async function confirmAddOutRouteStore() {
+  if (!addOutRouteSelected) return;
+  try {
+    const result = await WIM_API.addOutRouteStore(addOutRouteSelected.id);
+    showToast('success', result.message || 'Toko ditambahkan ke daftar kunjungan');
+    closeAddStore();
+    await loadMyStores();
+  } catch(e) {
+    showToast('error', 'Gagal', e.message);
+  }
+}
+</script>
+</body>
+</html>

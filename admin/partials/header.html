@@ -1,0 +1,84 @@
+<!-- ============================================================
+     WIM Admin — MASTER HEADER (single source of truth for the navbar)
+     Loaded by js/include.js into #appHeader on every admin page.
+
+     Dropdowns: CSS hover-open (desktop app). Hovering a trigger opens
+     the menu; moving the pointer onto the menu keeps it open (the menu
+     is positioned directly below the trigger — no hover-gap). Click
+     any sub-item to navigate. include.js only marks the active page
+     and restores the user identity.
+
+     IA: Dashboard · Penjualan · Katalog · Pelanggan · Operasional ·
+         Kunjungan · Analitik · Sistem
+     ============================================================ -->
+<div class="topnav">
+  <div class="brand">WIM&nbsp;<span>Admin</span></div>
+  <nav>
+    <a href="dashboard.html" data-page="dashboard">📊 Dashboard</a>
+
+    <div class="nav-drop" data-drop="penjualan">
+      <button class="drop-trigger" type="button">🛒 Penjualan</button>
+      <div class="drop-menu">
+        <a href="orders.html" data-page="orders">📦 Pesanan</a>
+        <a href="invoices.html" data-page="invoices">🧾 Invois &amp; Piutang</a>
+        <a href="packing.html" data-page="packing">🚚 Packing List</a>
+      </div>
+    </div>
+
+    <div class="nav-drop" data-drop="katalog">
+      <button class="drop-trigger" type="button">🏷️ Katalog</button>
+      <div class="drop-menu">
+        <a href="products.html" data-page="products">📦 Produk &amp; Harga</a>
+        <a href="pricing.html" data-page="pricing">💰 Harga per Depo</a>
+        <a href="promos.html" data-page="promos">🎁 Promo</a>
+      </div>
+    </div>
+
+    <div class="nav-drop" data-drop="pelanggan">
+      <button class="drop-trigger" type="button">🏬 Pelanggan</button>
+      <div class="drop-menu">
+        <a href="stores.html" data-page="stores">🏬 Toko</a>
+      </div>
+    </div>
+
+    <div class="nav-drop" data-drop="operasional">
+      <button class="drop-trigger" type="button">🏢 Operasional</button>
+      <div class="drop-menu">
+        <a href="depots.html" data-page="depots">🏢 Depo</a>
+        <a href="stock.html" data-page="stock">📦 Stok On-Hand</a>
+        <a href="route-map.html" data-page="route-map">🗺️ Rute &amp; Maps</a>
+      </div>
+    </div>
+
+    <div class="nav-drop" data-drop="kunjungan">
+      <button class="drop-trigger" type="button">🗓️ Kunjungan</button>
+      <div class="drop-menu">
+        <a href="today-plan.html" data-page="today-plan">👁️ Lihat Rencana</a>
+        <a href="plan-edit.html" data-page="plan-edit">✏️ Edit Rencana</a>
+        <a href="visits.html" data-page="visits">🛍️ Log Kunjungan</a>
+        <a href="attendance.html" data-page="attendance">⏰ Absensi</a>
+        <a href="team.html" data-page="team">👥 Tim</a>
+      </div>
+    </div>
+
+    <div class="nav-drop" data-drop="analitik">
+      <button class="drop-trigger" type="button">📈 Analitik</button>
+      <div class="drop-menu">
+        <a href="analytics.html" data-page="analytics">📊 Rekap &amp; Laporan</a>
+        <a href="laporan.html" data-page="laporan">🗂️ Laporan (Cetak)</a>
+      </div>
+    </div>
+
+    <div class="nav-drop" data-drop="sistem">
+      <button class="drop-trigger" type="button">⚙️ Sistem</button>
+      <div class="drop-menu">
+        <a href="users.html" data-page="users">👤 Pengguna</a>
+      </div>
+    </div>
+  </nav>
+  <div class="user-info">
+    <span id="userName">-</span>
+    <span class="role-badge" id="userRole">-</span>
+    <a href="#" class="logout" onclick="logout()">Keluar</a>
+  </div>
+</div>

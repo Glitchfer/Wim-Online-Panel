@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WIM Admin — Tim</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f0f2f5;color:#1a1a2e;font-size:14px}
+.topnav{background:#1a1a2e;color:#fff;padding:0 24px;display:flex;align-items:center;height:56px;position:sticky;top:0;z-index:100}
+.topnav .brand{font-weight:700;font-size:16px;margin-right:32px}.topnav .brand span{color:#8e8ea0;font-weight:400}
+.topnav nav{display:flex;gap:4px;flex:1}
+.topnav nav a{color:#b0b0c8;text-decoration:none;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:500;transition:all .15s}
+.topnav nav a:hover{color:#fff;background:rgba(255,255,255,.08)}
+.topnav nav a.active{color:#fff;background:#4361ee}
+.topnav .user-info{font-size:12px;color:#8e8ea0;display:flex;align-items:center;gap:8px}
+.topnav .user-info .role-badge{background:#4361ee;padding:2px 8px;border-radius:6px;font-size:11px;color:#fff}
+.topnav .logout{color:#e63946;cursor:pointer;font-size:12px;margin-left:12px;text-decoration:none}
+.container{max-width:1280px;margin:0 auto;padding:24px}
+.page-title{font-size:20px;font-weight:700;margin-bottom:20px}
+.page-title .sub{font-size:13px;color:#8e8ea0;font-weight:400}
+.card{background:#fff;border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,.04);overflow:hidden}
+.card-header{padding:16px 20px;border-bottom:1px solid #f0f2f5}
+.card-header h3{font-size:15px;font-weight:600}
+.card-body{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{padding:10px 14px;text-align:left;font-weight:600;color:#6c6c80;font-size:11px;text-transform:uppercase;letter-spacing:.5px;background:#fafbfc;border-bottom:1px solid #eef0f4}
+td{padding:10px 14px;border-bottom:1px solid #f0f2f5}
+tr:hover td{background:#f8f9fc}
+.status-badge{display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600}
+.status-ok{background:#d4f5e2;color:#0a7c42}
+.status-warn{background:#fff3cd;color:#856404}
+.status-miss{background:#fde8e8;color:#c0392b}
+.status-info{background:#e8f0fe;color:#4361ee}
+.loading{text-align:center;padding:40px;color:#8e8ea0}
+.summary-bar{display:flex;gap:24px;margin-bottom:16px;font-size:13px;color:#6c6c80}
+.summary-bar span{background:#fff;padding:8px 16px;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+</style>
+</head>
+<body data-page="team">
+<div id="appHeader"></div>
+<div class="container">
+  <div class="page-title">👥 Tim Sales <span class="sub" id="todayDate"></span></div>
+  <div class="summary-bar" id="summaryBar"></div>
+  <div class="card">
+    <div class="card-header"><h3>Daftar Anggota Tim</h3></div>
+    <div class="card-body">
+      <div class="loading" id="teamLoading">Memuat...</div>
+      <table id="teamTable" style="display:none">
+        <thead><tr><th>Nama</th><th>Email</th><th>Depo</th><th>Clock In</th><th>Clock Out</th><th>Geofence</th><th>Kunjungan</th></tr></thead>
+        <tbody id="teamBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+<script>
+const ADMIN_KEY='wim_admin_token';
+try{const u=JSON.parse(sessionStorage.getItem('admin_user')||'{}');if(document.getElementById('userName'))document.getElementById('userName').textContent=u.name||'-';if(document.getElementById('userRole'))document.getElementById('userRole').textContent=u.role||'-'}catch(e){}
+document.getElementById('todayDate').textContent=new Date().toLocaleDateString('id-ID',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+async function api(p){const r=await fetch(p,{credentials:'same-origin',headers:{'Accept':'application/json'}});if(r.status===401){logout();throw new Error('Session expired')}const d=await r.json();if(!r.ok)throw new Error(d.error||'API error');return d}
+function logout(){localStorage.removeItem(ADMIN_KEY);sessionStorage.removeItem('admin_user');fetch('/api/admin/logout',{method:'POST',credentials:'same-origin'}).catch(()=>{});location.href='index.html'}
+async function load(){try{const d=await api('/api/admin/team');const tb=document.getElementById('teamBody');document.getElementById('summaryBar').innerHTML=`<span>👥 ${d.total} anggota</span><span>✅ ${d.members.filter(m=>m.clockIn).length} hadir</span><span>🏭 ${d.members.filter(m=>m.geofenceStatus==='in_depot').length} di depo</span>`;if(!d.members.length){tb.innerHTML='<tr><td colspan="7" style="text-align:center;padding:20px;color:#8e8ea0">Tidak ada anggota tim</td></tr>'}else{tb.innerHTML=d.members.map(m=>{const gf=m.geofenceStatus==='in_depot'?'<span class="status-badge status-ok">🏭 Depo</span>':m.geofenceStatus==='outside'?'<span class="status-badge status-warn">📍 Luar</span>':'<span class="status-badge status-info">-</span>';return `<tr><td><b>${m.name}</b></td><td style="color:#8e8ea0;font-size:12px">${m.email}</td><td>${m.depot||'-'}</td><td>${m.clockIn||'-'}</td><td>${m.clockOut||'-'}</td><td>${gf}</td><td>${m.visitsToday}k</td></tr>`}).join('')}document.getElementById('teamLoading').style.display='none';document.getElementById('teamTable').style.display=''}catch(e){document.getElementById('teamLoading').textContent='Error: '+e.message}}
+load();
+
+document.querySelectorAll('.rencana-drop').forEach(function(dd){var menu=dd.querySelector('span[style*="position:absolute"]');if(!menu)return;dd.addEventListener('mouseenter',function(){menu.style.display='block'});dd.addEventListener('mouseleave',function(){menu.style.display='none'});});
+</script>
+<div id="appFooter"></div>
+<script src="js/include.js"></script>
+</body>
+</html>

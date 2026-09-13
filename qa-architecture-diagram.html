@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap');
+body { margin: 0; padding: 20px; background: #020617; min-height: 100vh; }
+svg { display: block; margin: 0 auto; }
+</style>
+</head>
+<body>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 950" width="1400" height="950">
+  <defs>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1e293b" stroke-width="0.5"/>
+    </pattern>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#94a3b8"/>
+    </marker>
+    <marker id="arrow-dashed" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#fb7185"/>
+    </marker>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1400" height="950" fill="#020617"/>
+  <rect width="1400" height="950" fill="url(#grid)"/>
+
+  <!-- Title -->
+  <text x="700" y="40" fill="#22d3ee" font-family="JetBrains Mono, monospace" font-size="18" font-weight="bold" text-anchor="middle">WIM Fleetbase — Architecture &amp; QA Test Map</text>
+  <text x="700" y="58" fill="#94a3b8" font-family="JetBrains Mono, monospace" font-size="10" text-anchor="middle">PT Wahana Inti Mas · SanQua AI Proxmox · 192.168.6.223</text>
+
+  <!-- ======== LAYER 1: Infrastructure ======== -->
+  <rect x="30" y="70" width="440" height="140" rx="8" fill="rgba(30,41,59,0.5)" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="8,4"/>
+  <text x="250" y="88" fill="#94a3b8" font-family="JetBrains Mono, monospace" font-size="10" font-weight="bold" text-anchor="middle">LAYER 1: INFRASTRUCTURE</text>
+
+  <!-- Proxmox -->
+  <rect x="50" y="100" width="180" height="60" rx="6" fill="rgba(120,53,15,0.3)" stroke="#fbbf24" stroke-width="1.5"/>
+  <text x="140" y="122" fill="#fbbf24" font-family="JetBrains Mono, monospace" font-size="10" font-weight="bold" text-anchor="middle">Proxmox VE</text>
+  <text x="140" y="136" fill="#fbbf24" font-family="JetBrains Mono, monospace" font-size="8" text-anchor="middle">192.168.6.101</text>
+  <text x="140" y="148" fill="#fbbf24" font-family="JetBrains Mono, monospace" font-size="7" text-anchor="middle">SanQua AI Server</text>
+
+  <!-- LXC 106 -->
+  <rect x="270" y="100" width="180" height="60" rx="6" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+  <text x="360" y="122" fill="#22d3ee" font-family="JetBrains Mono, monospace" font-size="10" font-weight="bold" text-anchor="middle">LXC 106 — Fleetbase</text>
+  <text x="360" y="136" fill="#22d3ee" font-family="JetBrains Mono, monospace" font-size="8" text-anchor="middle">192.168.6.223</text>
+  <text x="360" y="148" fill="#22d3ee" font-family="JetBrains Mono, monospace" font-size="7" text-anchor="middle">Privileged · 4C · 6GB · 24GB</text>
+
+  <!-- Arrow between Proxmox and LXC -->
+  <line x1="230" y1="130" x2="268" y2="130" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- ======== LAYER 2: Docker Stack ======== -->
+  <rect x="30" y="225" width="720" height="155" rx="8" fill="rgba(30,41,59,0.5)" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="8,4"/>
+  <text x="390" y="243" fill="#94a3b8" font-family="JetBrains Mono, monospace" font-size="10" font-weight="bold" text-anchor="middle">LAYER 2: DOCKER COMPOSE STACK</text>
+
+  <!-- Application -->
+  <rect x="50" y="255" width="195" height="55" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
+  <text x="147" y="275" fill="#34d399" font-family="JetBrains Mono, monospace" font-size="10" font-weight="bold" text-anchor="middle">Application</text>
+  <text x="147" y="290" fill="#34d399" font-family="JetBrains Mono, monospace" font-size="8" text-anchor="middle">Laravel API · :8000</text>
+  <text x="147" y="302" fill="#34d399" font-family="JetBrains Mono, monospace" font-size="7" text-anchor="middle">REST API + Geofence Engine</text>
+
+  <!-- Console -->
+  <rect x="270" y="255" width="195" height="55" rx="6" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+  <text x="367" y="275" fill="#22d3ee" font-family="JetBrains Mono, monospace" font-size="10" font-weight="bold" text-anchor="middle">Console</text>
+  <text x="367" y="290" fill="#22d3ee" font-family="JetBrains Mono, monospace" font-size="8" text-anchor="middle">Ember.js · :4200</text>
+  <text x="367" y="302" fill="#22d3ee" font-family="JetBrains Mono, monospace" font-size="7" text-anchor="middle">Admin Dashboard UI</text>
+
+  <!-- Database -->
+  <rect x="490" y="255" width="120" height="55" rx="6" fill="rgba(76,29,149,0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+  <text x="550" y="275" fill="#a78bfa" font-family="JetBrains Mono, monospace" font-size="10" font-weight="bold" text-anchor="middle">MySQL 8</text>
+  <text x="550" y="290" fill="#a78bfa" font-family="JetBrains Mono, monospace" font-size="8" text-anchor="middle">:3306</text>
+  <text x="550" y="302" fill="#a78bfa" font-family="JetBrains Mono, monospace" font-size="7" text-anchor="middle">Spatial Queries</text>
+
+  <!-- Cache -->
+  <rect x="630" y="255" width="100" height="55" rx="6" fill="rgba(251,146,60,0.3)" stroke="#fb923c" stroke-width="1.5"/>
+  <text x="680" y="275" fill="#fb923c" font-family="JetBrains Mono, monospace" font-size="10" font-weight="bold" text-anchor="middle">Redis</text>
+  <text x="680" y="290" fill="#fb923c" font-family="JetBrains Mono, monospace" font-size="8" text-anchor="middle">Cache</text>
+  <text x="680" y="302" fill="#fb923c" font-family="JetBrains Mono, monospace" font-size="7" text-anchor="middle">Queue</text>
+
+  <!-- Services row 2 -->
+  <rect x="50" y="320" width="130" height="45" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
+  <text x="115" y="338" fill="#34d399" font-family="JetBrains Mono, monospace" font-size="9" font-weight="bold" text-anchor="middle">Socket</text>
+  <text x="115" y="352" fill="#34d399" font-family="JetBrains Mono, monospace" font-size="7" text-anchor="middle">WebSocket :38000</text>
+
+  <rect x="200" y="320" width="130" height="45" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
+  <text x="265" y="338" fill="#34d399" font-family="JetBrains Mono, monospace" font-size="9" font-weight="bold" text-anchor="middle">Queue Worker</text>
+  <text x="265" y="352" fill="#34d399" font-family="JetBrains Mono, monospace" font-size="7" text-anchor="middle">Job Processor</text>
+
+  <rect x="350" y="320" width="130" height="45" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
+  <text x="415" y="338" fill="#34d399" font-family="JetBrains Mono, monospace" font-size="9" font-weight="bold" text-anchor="middle">Scheduler</text>
+  <text x="415" y="352" fill="#34d399" font-family="JetBrains Mono, monospace" font-size="7" text-anchor="middle">Cron (cosmetic)</text>
+
+  <rect x="500" y="320" width="130" height="45" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
+  <text x="565" y="338" fill="#34d399" font-family="JetBrains Mono, monospace" font-size="9" font-weight="bold" text-anchor="middle">HTTPD</text>
+  <text x="565" y="352" fill="#34d399" font-family="JetBrains Mono, monospace" font-size="7" text-anchor="middle">Reverse Proxy</text>
+
+  <!-- ======== LAYER 3: Test Data ======== -->
+  <rect x="30" y="395" width="720" height="185" rx="8" fill="rgba(30,41,59,0.5)" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="8,4"/>
+  <text x="390" y="413" fill="#94a3b8" font-family="JetBrains Mono, monospace" font-size="10" font-weight="bold" text-anchor="middle">LAYER 3: TEST DATA (G1 COMPLETE)</text>
+
+  <!-- Stores -->
+  <rect x="50" y="425" width="160" height="65" rx="6" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+  <text x="130" y="445" fill="#22d3ee" font-family="JetBrains Mono, monospace" font-size="10" font-weight="bold" text-anchor="middle">5 Stores (Places)</text>
+  <text x="130" y="460" fill="#22d3ee" font-family="JetBrains Mono, monospace" font-size="7" text-anchor="middle">Berkah · Jaya · Makmur</text>
+  <text x="130" y="472" fill="#22d3ee" font-family="JetBrains Mono, monospace" font-size="7" text-anchor="middle">Sejahtera · Baru</text>
+  <text x="130" y="484" fill="#22d3ee" font-family="JetBrains Mono, monospace" font-size="7" text-anchor="middle">All with lat/lng</text>
+
+  <!-- Zones -->
+  <rect x="230" y="425" width="155" height="65" rx="6" fill="rgba(76,29,149,0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+  <text x="307" y="445" fill="#a78bfa" font-family="JetBrains Mono, monospace" font-size="10" font-weight="bold" text-anchor="middle">3 Geofence Zones</text>
+  <text x="307" y="460" fill="#a78bfa" font-family="JetBrains Mono, monospace" font-size="7" text-anchor="middle">10m radius</text>
+  <text x="307" y="472" fill="#a78bfa" font-family="JetBrains Mono, monospace" font-size="7" text-anchor="middle">32-point polygons</text>
+  <text x="307" y="484" fill="#a78bfa" font-family="JetBrains Mono, monospace" font-size="7" text-anchor="middle">Entry/Exit triggers</text>
+
+  <!-- Products -->
+  <rect x="405" y="425" width="155" height="65" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
+  <text x="482" y="445" fill="#34d399" font-family="JetBrains Mono, monospace" font-size="10" font-weight="bold" text-anchor="middle">8 Products</text>
+  <text x="482" y="460" fill="#34d399" font-family="JetBrains Mono, monospace" font-size="7" text-anchor="middle">SANQUA (5) · LEVONTE (1)</text>
+  <text x="482" y="472" fill="#34d399" font-family="JetBrains Mono, monospace" font-size="7" text-anchor="middle">BATAVIA (2)</text>
+  <text x="482" y="484" fill="#34d399" font-family="JetBrains Mono, monospace" font-size="7" text-anchor="middle">Rp80k — Rp150k</text>
+
+  <!-- Driver + Vehicle -->
+  <rect x="580" y="425" width="155" height="65" rx="6" fill="rgba(251,146,60,0.3)" stroke="#fb923c" stroke-width="1.5"/>
+  <text x="657" y="445" fill="#fb923c" font-family="JetBrains Mono, monospace" font-size="10" font-weight="bold" text-anchor="middle">Driver + Vehicle</text>
+  <text x="657" y="460" fill="#fb923c" font-family="JetBrains Mono, monospace" font-size="7" text-anchor="middle">Andi Sales (active)</text>
+  <text x="657" y="472" fill="#fb923c" font-family="JetBrains Mono, monospace" font-size="7" text-anchor="middle">Motor Andi (B 1234 ABC)</text>
+  <text x="657" y="484" fill="#fb923c" font-family="JetBrains Mono, monospace" font-size="7" text-anchor="middle">Vehicle linked</text>
+
+  <!-- API Key -->
+  <rect x="50" y="500" width="340" height="40" rx="6" fill="rgba(136,19,55,0.4)" stroke="#fb7185" stroke-width="1.5"/>
+  <text x="220" y="518" fill="#fb7185" font-family="JetBrains Mono, monospace" font-size="9" font-weight="bold" text-anchor="middle">API Key: flb_live_RgeKNhT7Pg8rCcuXp8sD</text>
+  <text x="220" y="532" fill="#fb7185" font-family="JetBrains Mono, monospace" font-size="7" text-anchor="middle">Company: SanQua · Admin: reinharttanto@gmail.com</text>
+
+  <!-- ======== LAYER 4: User Flows ======== -->
+  <rect x="30" y="595" width="720" height="310" rx="8" fill="rgba(30,41,59,0.5)" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="8,4"/>
+  <text x="390" y="613" fill="#94a3b8" font-family="JetBrains Mono, monospace" font-size="10" font-weight="bold" text-anchor="middle">LAYER 4: USER FLOWS TO TEST</text>
+
+  <!-- Flow 1: Visit -->
+  <rect x="50" y="625" width="218" height="120" rx="6" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+  <text x="159" y="645" fill="#22d3ee" font-family="JetBrains Mono, monospace" font-size="10" font-weight="bold" text-anchor="middle">FLOW A: Sales Visit</text>
+  <text x="60" y="663" fill="#94a3b8" font-family="JetBrains Mono, monospace" font-size="8">1. Check-in at depot</text>
+  <text x="60" y="677" fill="#94a3b8" font-family="JetBrains Mono, monospace" font-size="8">2. View today's route</text>
+  <text x="60" y="691" fill="#94a3b8" font-family="JetBrains Mono, monospace" font-size="8">3. Navigate to store</text>
+  <text x="60" y="705" fill="#94a3b8" font-family="JetBrains Mono, monospace" font-size="8">4. Geofence check-in</text>
+  <text x="60" y="719" fill="#94a3b8" font-family="JetBrains Mono, monospace" font-size="8">5. Take selfie/photo</text>
+  <text x="60" y="733" fill="#94a3b8" font-family="JetBrains Mono, monospace" font-size="8">6. Enter stock check</text>
+
+  <!-- Flow 2: Order -->
+  <rect x="288" y="625" width="218" height="120" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
+  <text x="397" y="645" fill="#34d399" font-family="JetBrains Mono, monospace" font-size="10" font-weight="bold" text-anchor="middle">FLOW B: Order</text>
+  <text x="298" y="663" fill="#94a3b8" font-family="JetBrains Mono, monospace" font-size="8">1. Browse products</text>
+  <text x="298" y="677" fill="#94a3b8" font-family="JetBrains Mono, monospace" font-size="8">2. Add to cart</text>
+  <text x="298" y="691" fill="#94a3b8" font-family="JetBrains Mono, monospace" font-size="8">3. Bundling applies</text>
+  <text x="298" y="705" fill="#94a3b8" font-family="JetBrains Mono, monospace" font-size="8">4. Submit order</text>
+  <text x="298" y="719" fill="#94a3b8" font-family="JetBrains Mono, monospace" font-size="8">5. QR code generated</text>
+  <text x="298" y="733" fill="#94a3b8" font-family="JetBrains Mono, monospace" font-size="8">6. Scan to verify</text>
+
+  <!-- Flow 3: Admin -->
+  <rect x="526" y="625" width="218" height="120" rx="6" fill="rgba(76,29,149,0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+  <text x="635" y="645" fill="#a78bfa" font-family="JetBrains Mono, monospace" font-size="10" font-weight="bold" text-anchor="middle">FLOW C: Admin</text>
+  <text x="536" y="663" fill="#94a3b8" font-family="JetBrains Mono, monospace" font-size="8">1. Login to console</text>
+  <text x="536" y="677" fill="#94a3b8" font-family="JetBrains Mono, monospace" font-size="8">2. View dashboard</text>
+  <text x="536" y="691" fill="#94a3b8" font-family="JetBrains Mono, monospace" font-size="8">3. Manage stores</text>
+  <text x="536" y="705" fill="#94a3b8" font-family="JetBrains Mono, monospace" font-size="8">4. Manage users</text>
+  <text x="536" y="719" fill="#94a3b8" font-family="JetBrains Mono, monospace" font-size="8">5. Run reports</text>
+  <text x="536" y="733" fill="#94a3b8" font-family="JetBrains Mono, monospace" font-size="8">6. Export data</text>
+
+  <!-- NOO Flow -->
+  <rect x="50" y="758" width="330" height="60" rx="6" fill="rgba(251,146,60,0.3)" stroke="#fb923c" stroke-width="1.5"/>
+  <text x="215" y="778" fill="#fb923c" font-family="JetBrains Mono, monospace" font-size="10" font-weight="bold" text-anchor="middle">FLOW D: NOO (New Outlet Opening)</text>
+  <text x="60" y="795" fill="#94a3b8" font-family="JetBrains Mono, monospace" font-size="8">1. Fill store form (name, owner, channel, lat/lng) → 2. OTP optional → 3. Create Place + Contact</text>
+
+  <!-- Out-of-route -->
+  <rect x="400" y="758" width="340" height="60" rx="6" fill="rgba(136,19,55,0.4)" stroke="#fb7185" stroke-width="1.5"/>
+  <text x="570" y="778" fill="#fb7185" font-family="JetBrains Mono, monospace" font-size="10" font-weight="bold" text-anchor="middle">FLOW E: Out-of-Route Order</text>
+  <text x="410" y="795" fill="#94a3b8" font-family="JetBrains Mono, monospace" font-size="8">1. Add store on-the-fly → 2. Enter reason → 3. Create order with off_route_reason</text>
+
+  <!-- ======== Legend ======== -->
+  <rect x="790" y="70" width="330" height="120" rx="8" fill="rgba(30,41,59,0.5)" stroke="#94a3b8" stroke-width="1"/>
+  <text x="955" y="90" fill="#94a3b8" font-family="JetBrains Mono, monospace" font-size="10" font-weight="bold" text-anchor="middle">COMPONENT LEGEND</text>
+  <rect x="810" y="100" width="12" height="12" rx="2" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1"/>
+  <text x="830" y="110" fill="#94a3b8" font-family="JetBrains Mono, monospace" font-size="8">Frontend / Console</text>
+  <rect x="810" y="118" width="12" height="12" rx="2" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1"/>
+  <text x="830" y="128" fill="#94a3b8" font-family="JetBrains Mono, monospace" font-size="8">Backend / API</text>
+  <rect x="810" y="136" width="12" height="12" rx="2" fill="rgba(76,29,149,0.4)" stroke="#a78bfa" stroke-width="1"/>
+  <text x="830" y="146" fill="#94a3b8" font-family="JetBrains Mono, monospace" font-size="8">Database / Storage</text>
+  <rect x="810" y="154" width="12" height="12" rx="2" fill="rgba(120,53,15,0.3)" stroke="#fbbf24" stroke-width="1"/>
+  <text x="830" y="164" fill="#94a3b8" font-family="JetBrains Mono, monospace" font-size="8">Infrastructure / Host</text>
+  <rect x="810" y="172" width="12" height="12" rx="2" fill="rgba(136,19,55,0.4)" stroke="#fb7185" stroke-width="1"/>
+  <text x="830" y="182" fill="#94a3b8" font-family="JetBrains Mono, monospace" font-size="8">Security / Auth</text>
+
+  <!-- API Endpoints -->
+  <rect x="790" y="205" width="330" height="250" rx="8" fill="rgba(30,41,59,0.5)" stroke="#94a3b8" stroke-width="1"/>
+  <text x="955" y="225" fill="#94a3b8" font-family="JetBrains Mono, monospace" font-size="10" font-weight="bold" text-anchor="middle">API ENDPOINTS</text>
+  <text x="810" y="248" fill="#22d3ee" font-family="JetBrains Mono, monospace" font-size="8">GET  /v1/places</text>
+  <text x="810" y="262" fill="#34d399" font-family="JetBrains Mono, monospace" font-size="8">POST /v1/places</text>
+  <text x="810" y="276" fill="#22d3ee" font-family="JetBrains Mono, monospace" font-size="8">GET  /v1/zones</text>
+  <text x="810" y="290" fill="#22d3ee" font-family="JetBrains Mono, monospace" font-size="8">GET  /v1/entities</text>
+  <text x="810" y="304" fill="#fb923c" font-family="JetBrains Mono, monospace" font-size="8">POST /v1/drivers/{id}/track</text>
+  <text x="810" y="318" fill="#a78bfa" font-family="JetBrains Mono, monospace" font-size="8">GET  /v1/geofences/events</text>
+  <text x="810" y="332" fill="#34d399" font-family="JetBrains Mono, monospace" font-size="8">POST /v1/orders</text>
+  <text x="810" y="346" fill="#22d3ee" font-family="JetBrains Mono, monospace" font-size="8">GET  /v1/orders</text>
+  <text x="810" y="360" fill="#fb7185" font-family="JetBrains Mono, monospace" font-size="8">PATCH /v1/orders/{id}</text>
+  <text x="810" y="374" fill="#22d3ee" font-family="JetBrains Mono, monospace" font-size="8">GET  /v1/contacts</text>
+  <text x="810" y="388" fill="#34d399" font-family="JetBrains Mono, monospace" font-size="8">POST /v1/contacts</text>
+  <text x="810" y="402" fill="#22d3ee" font-family="JetBrains Mono, monospace" font-size="8">GET  /v1/drivers</text>
+  <text x="810" y="416" fill="#22d3ee" font-family="JetBrains Mono, monospace" font-size="8">GET  /v1/vehicles</text>
+  <text x="810" y="430" fill="#22d3ee" font-family="JetBrains Mono, monospace" font-size="8">GET  /v1/routes</text>
+  <text x="810" y="444" fill="#fb923c" font-family="JetBrains Mono, monospace" font-size="8">POST /v1/routes</text>
+  <text x="810" y="458" fill="#22d3ee" font-family="JetBrains Mono, monospace" font-size="8">GET  /v1/fleet-ops/drivers</text>
+
+  <!-- Test Env Status -->
+  <rect x="790" y="470" width="330" height="120" rx="8" fill="rgba(30,41,59,0.5)" stroke="#94a3b8" stroke-width="1"/>
+  <text x="955" y="490" fill="#94a3b8" font-family="JetBrains Mono, monospace" font-size="10" font-weight="bold" text-anchor="middle">TEST ENVIRONMENT STATUS</text>
+  <text x="810" y="515" fill="#34d399" font-family="JetBrains Mono, monospace" font-size="9">[OK] Console :4200</text>
+  <text x="810" y="532" fill="#34d399" font-family="JetBrains Mono, monospace" font-size="9">[OK] API :8000/v1</text>
+  <text x="810" y="549" fill="#34d399" font-family="JetBrains Mono, monospace" font-size="9">[OK] API Key Authentication</text>
+  <text x="810" y="566" fill="#34d399" font-family="JetBrains Mono, monospace" font-size="9">[OK] 5 Stores with lat/lng</text>
+  <text x="810" y="583" fill="#34d399" font-family="JetBrains Mono, monospace" font-size="9">[OK] 3 Geofence Zones</text>
+
+  <!-- QA Process -->
+  <rect x="790" y="605" width="330" height="295" rx="8" fill="rgba(30,41,59,0.5)" stroke="#94a3b8" stroke-width="1"/>
+  <text x="955" y="625" fill="#94a3b8" font-family="JetBrains Mono, monospace" font-size="10" font-weight="bold" text-anchor="middle">QA SUBAGENT PROCESS</text>
+  <text x="810" y="650" fill="#22d3ee" font-family="JetBrains Mono, monospace" font-size="9" font-weight="bold">Subagent A: Sales Rep</text>
+  <text x="820" y="665" fill="#94a3b8" font-family="JetBrains Mono, monospace" font-size="7">Visit card · Check-in · NOO · Order</text>
+  <text x="820" y="678" fill="#94a3b8" font-family="JetBrains Mono, monospace" font-size="7">Photo · Stock · Out-of-route</text>
+  <text x="810" y="698" fill="#34d399" font-family="JetBrains Mono, monospace" font-size="9" font-weight="bold">Subagent B: Depot Admin</text>
+  <text x="820" y="713" fill="#94a3b8" font-family="JetBrains Mono, monospace" font-size="7">Route plan · Admin order · Report</text>
+  <text x="820" y="726" fill="#94a3b8" font-family="JetBrains Mono, monospace" font-size="7">Export · User management</text>
+  <text x="810" y="746" fill="#a78bfa" font-family="JetBrains Mono, monospace" font-size="9" font-weight="bold">Subagent C: Super Admin</text>
+  <text x="820" y="761" fill="#94a3b8" font-family="JetBrains Mono, monospace" font-size="7">Dashboard · Settings · Promo</text>
+  <text x="820" y="774" fill="#94a3b8" font-family="JetBrains Mono, monospace" font-size="7">Analytics · Full reporting</text>
+  <text x="810" y="800" fill="#fb7185" font-family="JetBrains Mono, monospace" font-size="9" font-weight="bold">Gate Rule</text>
+  <text x="820" y="815" fill="#94a3b8" font-family="JetBrains Mono, monospace" font-size="7">ALL 3 subagents must agree</text>
+  <text x="820" y="828" fill="#94a3b8" font-family="JetBrains Mono, monospace" font-size="7">"Yes" → feature is done</text>
+  <text x="820" y="841" fill="#94a3b8" font-family="JetBrains Mono, monospace" font-size="7">"No"/"Maybe" → fix + re-loop</text>
+  <text x="810" y="865" fill="#fb923c" font-family="JetBrains Mono, monospace" font-size="9" font-weight="bold">Feedback Structure</text>
+  <text x="820" y="880" fill="#94a3b8" font-family="JetBrains Mono, monospace" font-size="7">1. What worked?</text>
+  <text x="820" y="893" fill="#94a3b8" font-family="JetBrains Mono, monospace" font-size="7">2. Missing vs GooVi/KlikOrder?</text>
+  <text x="820" y="906" fill="#94a3b8" font-family="JetBrains Mono, monospace" font-size="7">3. Bugs/edge cases?</text>
+  <text x="820" y="919" fill="#94a3b8" font-family="JetBrains Mono, monospace" font-size="7">4. Production ready? (Yes/No/Maybe)</text>
+</svg>
+</body>
+</html>

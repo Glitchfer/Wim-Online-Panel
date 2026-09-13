@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WIM Admin — Invois</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f0f2f5;color:#1a1a2e;font-size:14px}
+.topnav{background:#1a1a2e;color:#fff;padding:0 24px;display:flex;align-items:center;height:56px;position:sticky;top:0;z-index:100}
+.topnav .brand{font-weight:700;font-size:16px;margin-right:32px}.topnav .brand span{color:#8e8ea0;font-weight:400}
+.topnav nav{display:flex;gap:4px;flex:1;overflow-x:auto}
+.topnav nav a{color:#b0b0c8;text-decoration:none;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:500;transition:all .15s;white-space:nowrap}
+.topnav nav a:hover{color:#fff;background:rgba(255,255,255,.08)}
+.topnav nav a.active{color:#fff;background:#4361ee}
+.topnav .user-info{font-size:12px;color:#8e8ea0;display:flex;align-items:center;gap:8px}
+.topnav .user-info .role-badge{background:#4361ee;padding:2px 8px;border-radius:6px;font-size:11px;color:#fff}
+.topnav .logout{color:#e63946;cursor:pointer;font-size:12px;margin-left:12px;text-decoration:none}
+.container{max-width:1400px;margin:0 auto;padding:24px}
+.page-title{font-size:20px;font-weight:700;margin-bottom:20px}
+.page-title .sub{font-size:13px;color:#8e8ea0;font-weight:400}
+.filters{display:flex;gap:10px;margin-bottom:16px;align-items:center;flex-wrap:wrap;background:#fff;padding:12px 16px;border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,.04)}
+.filters label{font-size:12px;font-weight:600;color:#6c6c80;white-space:nowrap}
+.filters input,.filters select{padding:7px 10px;border:1.5px solid #e0e0e8;border-radius:8px;font-size:13px;background:#fff}
+.filters select:focus,.filters input:focus{outline:none;border-color:#4361ee}
+.filters .sep{width:1px;height:26px;background:#e0e0e8}
+.btn{padding:8px 16px;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer}
+.btn-green{background:#0a7c42;color:#fff}
+.btn-blue{background:#4361ee;color:#fff}
+.card{background:#fff;border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,.04);overflow:hidden;margin-bottom:16px}
+.card-header{padding:14px 20px;border-bottom:1px solid #f0f2f5;font-size:14px;font-weight:600}
+.card-body{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{padding:10px 14px;text-align:left;font-weight:600;color:#6c6c80;font-size:11px;text-transform:uppercase;letter-spacing:.5px;background:#fafbfc;border-bottom:1px solid #eef0f4}
+td{padding:10px 14px;border-bottom:1px solid #f0f2f5}
+tr:hover td{background:#f8f9fc}
+.status-badge{display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600}
+.status-ok{background:#d4f5e2;color:#0a7c42}
+.status-warn{background:#fff3cd;color:#856404}
+.status-info{background:#e8f0fe;color:#4361ee}
+.aging{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.aging .box{background:#fff;border-radius:10px;padding:14px 16px;box-shadow:0 1px 4px rgba(0,0,0,.04)}
+.aging .box .v{font-size:20px;font-weight:700}
+.aging .box .l{font-size:12px;color:#8e8ea0}
+.loading{text-align:center;padding:40px;color:#8e8ea0}
+.empty-state{text-align:center;padding:40px;color:#8e8ea0}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;z-index:200}
+.modal .box{background:#fff;border-radius:12px;padding:24px;width:min(440px,92vw)}
+.modal h3{margin-bottom:14px}
+.modal label{font-size:12px;font-weight:600;color:#6c6c80;display:block;margin:10px 0 4px}
+.modal input,.modal select{padding:8px 10px;border:1.5px solid #e0e0e8;border-radius:8px;font-size:13px;width:100%}
+.modal .row{display:flex;gap:8px;margin-top:16px;justify-content:flex-end}
+</style>
+</head>
+<body data-page="invoices">
+<div id="appHeader"></div>
+<div class="container">
+  <div class="page-title">🧾 Invois & Piutang (AR) <span class="sub">Tagihan per order + aging piutang</span></div>
+  <div class="filters">
+    <label>Dari</label><input type="date" id="fFrom" onchange="load()">
+    <label>Sampai</label><input type="date" id="fTo" onchange="load()">
+    <span class="sep"></span>
+    <label>Status</label>
+    <select id="fStatus" onchange="load()">
+      <option value="">Semua</option>
+      <option value="unpaid">Belum Bayar</option>
+      <option value="paid">Lunas</option>
+      <option value="partial">Sebagian</option>
+    </select>
+    <button class="btn btn-blue" onclick="openCreate()">+ Buat Invois</button>
+  </div>
+  <div class="aging" id="agingBox" style="margin-bottom:16px"></div>
+  <div class="card">
+    <div class="card-header">Daftar Invois</div>
+    <div class="card-body">
+      <div class="loading" id="loading">Memuat...</div>
+      <table id="invoiceTable" style="display:none">
+        <thead><tr><th>No. Invois</th><th>Order</th><th>Pelanggan</th><th>Sales</th><th>Total</th><th>Status</th><th>Terbit</th></tr></thead>
+        <tbody id="invoiceBody"></tbody>
+      </table>
+      <div class="empty-state" id="emptyState" style="display:none">Belum ada in</div>
+    </div>
+  </div>
+</div>
+<div class="modal" id="createModal">
+  <div class="box">
+    <h3>Buat Invois dari Order</h3>
+    <label>Order (UUID)</label>
+    <input id="orderUuid" placeholder="contoh: 8d671f87-...">
+    <div class="row">
+      <button class="btn btn-green" onclick="createInvoice()">Buat</button>
+      <button class="btn" style="background:#e0e0e8;color:#444" onclick="closeCreate()">Batal</button>
+    </div>
+  </div>
+</div>
+<script>
+const ADMIN_KEY='wim_admin_token';
+let INVOICES=[];
+try{const u=JSON.parse(sessionStorage.getItem('admin_user')||'{}');if(document.getElementById('userName'))document.getElementById('userName').textContent=u.name||'-';if(document.getElementById('userRole'))document.getElementById('userRole').textContent=u.role||'-'}catch(e){}
+async function api(p,opts){const r=await fetch(p,Object.assign({credentials:'same-origin',headers:{'Accept':'application/json','Content-Type':'application/json'}},opts||{}));if(r.status===401){logout();throw new Error('Session expired')}const d=await r.json();if(!r.ok)throw new Error(d.error||'API error');return d}
+function logout(){localStorage.removeItem(ADMIN_KEY);sessionStorage.removeItem('admin_user');fetch('/api/admin/logout',{method:'POST',credentials:'same-origin'}).catch(()=>{});location.href='index.html'}
+function setDate(id,daysAgo){const d=new Date();d.setDate(d.getDate()-daysAgo);document.getElementById(id).valueAsDate=d}
+function initDates(){if(!document.getElementById('fFrom').value)setDate('fFrom',30);if(!document.getElementById('fTo').value)setDate('fTo',90)}
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(m){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]})}
+function rp(v){return 'Rp '+Number(v||0).toLocaleString('id-ID')}
+function badge(s){s=String(s||'');const c=s==='paid'?'status-ok':'status-warn';const t=s==='paid'?'Lunas':(s==='partial'?'Sebagian':'Belum Bayar');return '<span class="status-badge '+c+'">'+t+'</span>'}
+function buildQuery(){const p=new URLSearchParams();const f=document.getElementById('fFrom').value,t=document.getElementById('fTo').value,s=document.getElementById('fStatus').value;if(f)p.set('date_from',f);if(t)p.set('date_to',t);if(s)p.set('status',s);return p.toString()}
+async function load(){
+  document.getElementById('loading').style.display='block';document.getElementById('invoiceTable').style.display='none';document.getElementById('emptyState').style.display='none';
+  try{const d=await api('/api/admin/invoices?'+buildQuery());INVOICES=d.invoices||[];
+    const aging=d.aging||{};document.getElementById('agingBox').innerHTML=
+      ['<div class="box"><div class="v">'+rp(aging.d30)+'</div><div class="l">Piutang &le; 30 hari</div></div>',
+       '<div class="box"><div class="v">'+rp(aging.d60)+'</div><div class="l">Piutang 31-60 hari</div></div>',
+       '<div class="box"><div class="v">'+rp(aging.d90)+'</div><div class="l">Piutang &gt; 60 hari</div></div>'].join('');
+    document.getElementById('loading').style.display='none';
+    if(!INVOICES.length){document.getElementById('emptyState').style.display='block';return}
+    document.getElementById('invoiceTable').style.display='';
+    document.getElementById('invoiceBody').innerHTML=INVOICES.map(i=>'<tr><td style="font-family:monospace">'+esc(i.invoice_no)+'</td><td>'+esc(i.order_ref||'-')+'</td><td>'+esc(i.customer_name||'-')+'</td><td>'+esc(i.rep_name||'-')+'</td><td><b>'+rp(i.grand_total)+'</b></td><td>'+badge(i.status)+'</td><td>'+fmtDate(i.issued_at)+'</td></tr>').join('');
+  }catch(e){document.getElementById('loading').textContent='Error: '+e.message;document.getElementById('loading').style.display='block'}
+}
+function fmtDate(v){if(!v)return '-';const d=new Date(v);return isNaN(d.getTime())?'-':d.toLocaleDateString('id-ID')}
+function openCreate(){document.getElementById('createModal').style.display='flex'}
+function closeCreate(){document.getElementById('createModal').style.display='none'}
+async function createInvoice(){
+  const u=(document.getElementById('orderUuid').value||'').trim();
+  if(!u){alert('Masukkan UUID order');return}
+  try{const d=await api('/api/admin/invoices',{method:'POST',body:JSON.stringify({order_uuid:u})});alert('Invois '+d.invoice_no+' dibuat ('+rp(d.grand_total)+')');closeCreate();load()}catch(e){alert('Gagal: '+e.message)}
+}
+initDates();load();
+</script>
+<div id="appFooter"></div>
+<script src="js/include.js"></script>
+</body>
+</html>

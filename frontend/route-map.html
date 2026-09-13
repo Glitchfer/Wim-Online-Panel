@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>WIM Online — Rute Kunjungan</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="stylesheet" href="css/app.css">
+<style>
+#map { width: 100%; height: calc(100vh - 120px); border-radius: 12px; margin-top: 8px; }
+.route-header { display:flex;align-items:center;gap:10px;padding:8px 0; }
+.route-stats { display:flex;gap:16px;font-size:12px;color:var(--gray-400); }
+.depot-marker { background: #e74c3c; border: 3px solid #fff; border-radius: 50%; width: 20px; height: 20px; box-shadow: 0 2px 6px rgba(0,0,0,0.3); }
+.store-marker { background: #3498db; border: 3px solid #fff; border-radius: 50%; width: 16px; height: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.3); }
+.store-marker.visited { background: #27ae60; }
+.store-marker.luar-rute { background: #f39c12; }
+.leaflet-popup-content-wrapper { border-radius: 10px; font-size: 13px; }
+.leaflet-popup-content { margin: 8px 12px; }
+</style>
+</head>
+<body>
+<div class="app-shell">
+  <header class="app-header">
+    <div class="header-row">
+      <button class="back-btn" onclick="history.back()">←</button>
+      <h1>Rute Kunjungan</h1>
+      <span style="width:36px;"></span>
+    </div>
+    <div class="subtitle">Peta kunjungan hari ini</div>
+  </header>
+
+  <div class="main-content" style="padding:0 12px;">
+    <div class="route-header">
+      <div class="route-stats" id="routeStats">
+        <span>📍 <span id="totalStores">0</span> toko</span>
+        <span>🟢 <span id="visitedStores">0</span> dikunjungi</span>
+        <span>🔴 <span id="depotCount">0</span> depo</span>
+      </div>
+    </div>
+    <div id="map"></div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="js/config.js"></script>
+<script src="js/api.js"></script>
+<script src="js/app.js"></script>
+<script>
+let map, userMarker;
+
+document.addEventListener('DOMContentLoaded', async () => {
+  const user = await Session.checkOrRedirect();
+  if (!user) return;
+
+  // Initialize map
+  map = L.map('map', { zoomControl: true }).setView([-6.2, 106.8], 12);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap',
+    maxZoom: 18
+  }).addTo(map);
+
+  // Try GPS
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        map.setView([pos.coords.latitude, pos.coords.longitude], 14);
+        const icon = L.divIcon({ className: 'depot-marker', iconSize: [20, 20], iconAnchor: [10, 10] });
+        userMarker = L.marker([pos.coords.latitude, pos.coords.longitude], { icon }).addTo(map);
+        userMarker.bindPopup('<b>📍 Posisi Saya</b>');
+      },
+      () => {},
+      { enableHighAccuracy: true, timeout: 5000 }
+    );
+  }
+
+  // Load stores from dashboard
+  try {
+    const stores = await WIM_API.getMyStores();
+    document.getElementById('totalStores').textContent = stores.length;
+    document.getElementById('visitedStores').textContent = stores.filter(s => s.status === 'visited').length;
+
+    stores.forEach(s => {
+      if (!s.latitude || !s.longitude) return;
+      let className = 'store-marker';
+      if (s.status === 'visited') className += ' visited';
+      if (s.source === 'luar_rute') className += ' luar-rute';
+
+      const icon = L.divIcon({
+        className,
+        iconSize: [16, 16],
+        iconAnchor: [8, 8],
+      });
+      const marker = L.marker([parseFloat(s.latitude), parseFloat(s.longitude)], { icon }).addTo(map);
+      const badge = s.source === 'luar_rute' ? '📍 Luar Rute' : '📍 Dalam Rute';
+      const status = s.status === 'visited' ? '✅ Sudah dikunjungi' : '⏳ Belum dikunjungi';
+      marker.bindPopup(`<b>${s.name}</b><br>${s.city || ''}<br><span style="font-size:11px;">${badge} • ${status}</span>`);
+    });
+  } catch(e) {
+    console.error('Failed to load stores for map:', e);
+  }
+
+  // Load depots
+  try {
+    const resp = await fetch('/api/depots', { credentials: 'same-origin', headers: { 'Accept': 'application/json' } });
+    if (resp.ok) {
+      const data = await resp.json();
+      const depots = data.depots || [];
+      document.getElementById('depotCount').textContent = depots.length;
+
+      depots.forEach(d => {
+        const circle = L.circle([d.lat, d.lng], {
+          color: '#e74c3c', fillColor: '#e74c3c', fillOpacity: 0.1, radius: d.radiusMeters
+        }).addTo(map);
+        circle.bindPopup(`<b>🏭 ${d.name}</b><br>${d.address || ''}<br><span style="font-size:11px;">Radius: ${d.radiusMeters}m</span>`);
+
+        const icon = L.divIcon({ className: 'depot-marker', iconSize: [20, 20], iconAnchor: [10, 10] });
+        L.marker([d.lat, d.lng], { icon }).addTo(map).bindPopup(d.name);
+      });
+    }
+  } catch(e) {
+    console.error('Failed to load depots:', e);
+  }
+});
+</script>
+</body>
+</html>

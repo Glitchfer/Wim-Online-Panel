@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>WIM Online — Laporan</title>
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<div class="app-shell">
+  <header class="app-header">
+    <div class="header-row">
+      <button class="back-btn" onclick="history.back()">←</button>
+      <h1>Laporan</h1>
+      <span style="width:36px;"></span>
+    </div>
+    <div class="subtitle">WIM Online — Laporan Saya</div>
+  </header>
+
+  <div class="main-content">
+    <!-- Stats Overview -->
+    <div class="stats-grid" id="reportStats">
+      <div class="stat-card"><div class="stat-value" id="statAbsen">—</div><div class="stat-label">Hari Masuk</div></div>
+      <div class="stat-card"><div class="stat-value" id="statKunjungan">—</div><div class="stat-label">Total Kunjungan</div></div>
+      <div class="stat-card"><div class="stat-value" id="statToko">—</div><div class="stat-label">Toko Dikunjungi</div></div>
+      <div class="stat-card"><div class="stat-value" id="statPesanan">—</div><div class="stat-label">Pesanan Saya</div></div>
+    </div>
+
+    <!-- Detail Cards -->
+    <div class="card">
+      <div class="card-title" style="margin-bottom:12px;">Ringkasan Bulan Ini</div>
+      <div id="reportSummary" class="empty-state"><p>Memuat...</p></div>
+    </div>
+
+    <!-- Export Actions -->
+    <div class="card">
+      <div class="card-title" style="margin-bottom:12px;">📥 Export Data</div>
+      <div style="display:grid;gap:8px;">
+        <button class="btn btn-outline btn-sm" onclick="exportVisits()">📍 Export Kunjungan Saya (JSON)</button>
+        <button class="btn btn-outline btn-sm" onclick="exportAttendance()">⏰ Export Absensi Saya (JSON)</button>
+        <button class="btn btn-primary btn-sm" onclick="exportCSV()">📊 Export Laporan Lengkap (CSV)</button>
+      </div>
+    </div>
+
+    <!-- Daily breakdown -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Aktivitas 7 Hari Terakhir</div>
+      </div>
+      <div id="dailyList">
+        <div class="empty-state"><p>Belum ada data</p></div>
+      </div>
+    </div>
+  </div>
+
+  <nav class="bottom-nav">
+    <a href="dashboard.html" ><span class="nav-icon">🏠</span>Beranda</a>
+    <a href="absensi.html" ><span class="nav-icon">⏰</span>Absensi</a>
+    <a href="visit-card.html" ><span class="nav-icon">📋</span>Kunjungan</a>
+    <a href="noo.html" ><span class="nav-icon">➕</span>NOO</a>
+    <a href="report.html" class="active"><span class="nav-icon">📊</span>Laporan</a>
+  </nav>
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/api.js"></script>
+<script src="js/app.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+  const user = await Session.checkOrRedirect();
+  if (!user) return;
+  await loadReport();
+});
+
+async function loadReport() {
+  try {
+    const report = await WIM_API.getReport('bulanan');
+    document.getElementById('statAbsen').textContent = report.attendanceDays || 0;
+    document.getElementById('statKunjungan').textContent = report.visits || 0;
+    document.getElementById('statToko').textContent = report.storesVisited || 0;
+    document.getElementById('statPesanan').textContent = report.orders || 0;
+
+    // Summary text
+    const now = new Date();
+    const monthName = now.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
+    document.getElementById('reportSummary').innerHTML =
+      `<div style="font-size:13px;color:var(--gray-600);line-height:1.8;">
+        <div>📅 <b>${monthName}</b></div>
+        <div>⏰ Absensi: <b>${report.attendanceDays || 0} hari</b> masuk</div>
+        <div>📍 Kunjungan: <b>${report.visits || 0}</b> kali ke <b>${report.storesVisited || 0}</b> toko</div>
+        <div>📋 Pesanan ditugaskan: <b>${report.orders || 0}</b></div>
+      </div>`;
+
+    // Daily breakdown
+    const daily = report.daily || [];
+    const dailyEl = document.getElementById('dailyList');
+    if (daily.length === 0) {
+      dailyEl.innerHTML = `<div class="empty-state"><p>Belum ada data absensi 7 hari terakhir</p></div>`;
+    } else {
+      dailyEl.innerHTML = daily.map(d => {
+        const dateStr = new Date(d.date + 'T00:00:00').toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric', month: 'short' });
+        return `<div class="store-item">
+          <div class="store-icon" style="background:${d.clockIn ? 'var(--green)' : 'var(--gray-300)'};color:#fff;">${d.clockIn ? '✓' : '—'}</div>
+          <div class="store-info">
+            <div class="store-name">${dateStr}</div>
+            <div class="store-address">
+              ${d.clockIn ? `Masuk ${d.clockIn}${d.clockOut ? ' • Keluar ' + d.clockOut : ''}` : 'Tidak absen'}
+              ${d.duration ? ` • ${d.duration}` : ''}
+              ${d.visits ? ` • ${d.visits} kunjungan` : ''}
+            </div>
+          </div>
+        </div>`;
+      }).join('');
+    }
+  } catch(e) {
+    console.error('Report load error:', e);
+    document.getElementById('reportSummary').innerHTML = `<div class="alert alert-danger">Gagal memuat: ${e.message}</div>`;
+  }
+}
+
+async function exportVisits() {
+  const visits = await WIM_API.getVisits();
+  downloadJSON(visits, `wim-kunjungan-${new Date().toISOString().slice(0,10)}.json`);
+}
+
+async function exportAttendance() {
+  const absen = await WIM_API.get('/api/absensi');
+  downloadJSON(absen, `wim-absensi-${new Date().toISOString().slice(0,10)}.json`);
+}
+
+async function exportCSV() {
+  const [report, visits, absen] = await Promise.all([
+    WIM_API.getReport('bulanan'),
+    WIM_API.getVisits(),
+    WIM_API.get('/api/absensi'),
+  ]);
+  let csv = 'LAPORAN WIM ONLINE\n';
+  csv += `Tanggal: ${new Date().toLocaleDateString('id-ID')}\n\n`;
+  csv += `Hari Masuk: ${report.attendanceDays}\n`;
+  csv += `Total Kunjungan: ${report.visits}\n`;
+  csv += `Toko Dikunjungi: ${report.storesVisited}\n`;
+  csv += `Pesanan: ${report.orders}\n\n`;
+  csv += '--- KUNJUNGAN ---\n';
+  csv += 'Toko,Waktu Check-in,Waktu Check-out,Status,Sumber\n';
+  (visits || []).forEach(v => {
+    csv += `${v.placeName},${v.checkinAt||''},${v.checkoutAt||''},${v.status},${v.source}\n`;
+  });
+  csv += '\n--- ABSENSI ---\n';
+  if (absen && absen.clockIn) {
+    csv += `Tanggal: ${absen.date}\n`;
+    csv += `Masuk: ${absen.clockIn}\n`;
+    csv += `Keluar: ${absen.clockOut||''}\n`;
+    csv += `Durasi: ${absen.duration||''}\n`;
+  }
+  downloadCSV(csv.split('\n'), [], `wim-laporan-${new Date().toISOString().slice(0,10)}.csv`);
+}
+
+function downloadCSV(csvLines, rows, filename) {
+  let csv = '';
+  if (csvLines.length) csv = csvLines.join('\n') + '\n';
+  csv += rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+</script>
+</body>
+</html>

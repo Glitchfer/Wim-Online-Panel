@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WIM Admin — Edit List Kunjungan</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#eef0f5;color:#16172b;font-size:14px}
+.container{max-width:1500px;margin:0 auto;padding:20px}
+.page-title{font-size:20px;font-weight:800;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between}
+.page-title .sub{font-size:13px;color:#8e8ea0;font-weight:400}
+.card{background:#fff;border-radius:14px;box-shadow:0 1px 5px rgba(0,0,0,.06);overflow:hidden}
+.card-header{padding:14px 18px;border-bottom:1px solid #eef0f5;display:flex;justify-content:space-between;align-items:center}
+.card-header h3{font-size:15px;font-weight:700}
+.card-body{padding:16px 18px}
+.filters{display:flex;gap:10px;margin-bottom:14px;align-items:center;flex-wrap:wrap;background:#fff;padding:12px 16px;border-radius:12px;box-shadow:0 1px 5px rgba(0,0,0,.05)}
+.filters label{font-size:12px;font-weight:600;color:#5f6074;white-space:nowrap}
+.filters input,.filters select{padding:7px 10px;border:1.5px solid #e0e2eb;border-radius:8px;font-size:13px;background:#fff}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{padding:10px 14px;text-align:left;font-weight:600;color:#5f6074;font-size:11px;text-transform:uppercase;letter-spacing:.5px;background:#fafbfc;border-bottom:1px solid #eef0f5}
+td{padding:10px 14px;border-bottom:1px solid #f0f2f8}
+tr:hover td{background:#f8f9fc}
+tr.clickable{cursor:pointer}
+.btn{padding:8px 14px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none}
+.btn-primary{background:#4361ee;color:#fff}
+.btn-primary:active{transform:translateY(1px)}
+.btn-success{background:#0a7c42;color:#fff}
+.btn-success:active{transform:scale(.97)}
+.btn-outline{background:#fff;color:#4361ee;border:1.5px solid #d0d4e0}
+.btn-sm{padding:5px 10px;font-size:12px}
+.muted{color:#8e8ea0;font-size:12px}
+.loading{text-align:center;padding:40px;color:#8e8ea0}
+.error-bar{background:#fde8e8;color:#c0392b;padding:12px 20px;border-radius:8px;margin-bottom:16px;font-size:13px;display:none}
+.toast{position:fixed;top:22px;right:22px;padding:14px 22px;border-radius:10px;font-size:14px;font-weight:600;z-index:3000;display:none;box-shadow:0 6px 20px rgba(0,0,0,.15);min-width:260px;text-align:center}
+.toast-success{background:#0a7c42;color:#fff}
+.toast-error{background:#c0392b;color:#fff}
+.toast-warning{background:#856404;color:#fff}
+.step{display:none}
+.step.active{display:block}
+.breadcrumb{display:flex;gap:8px;align-items:center;margin-bottom:14px;font-size:13px}
+.breadcrumb .crumb{color:#4361ee;cursor:pointer}
+.breadcrumb .crumb.done{font-weight:700}
+.breadcrumb .sep{color:#c0c4d0}
+
+/* ── Step 2: 4x6 template grid ── */
+.tpl-grid{display:grid;grid-template-columns:90px repeat(6,1fr);gap:8px}
+.tpl-grid .tpl-corner{font-weight:700;font-size:12px;color:#5f6074;display:flex;align-items:center;padding:6px}
+.tpl-grid .tpl-dayhead{font-weight:700;font-size:12px;color:#4361ee;text-align:center;padding:6px;background:#f0f4ff;border-radius:8px}
+.tpl-grid .tpl-weeklabel{font-weight:700;font-size:12px;color:#5f6074;display:flex;align-items:center;padding:6px}
+.tpl-cell{background:#fff;border:1.5px solid #e0e2eb;border-radius:10px;min-height:74px;padding:8px 10px;cursor:pointer;transition:all .12s;position:relative;text-align:left}
+.tpl-cell:hover{border-color:#4361ee;box-shadow:0 2px 8px rgba(67,97,238,.15)}
+.tpl-cell.active{outline:3px solid #4361ee;border-color:#4361ee;background:#f5f7ff}
+.tpl-cell .tpl-slotname{font-weight:700;font-size:12px;color:#16172b}
+.tpl-cell .tpl-date{font-size:10px;color:#0984e3;margin-top:2px;font-weight:600}
+.tpl-cell .tpl-count{display:inline-block;margin-top:6px;font-size:12px;font-weight:700;color:#4361ee;background:#eef2ff;padding:2px 9px;border-radius:12px}
+.tpl-cell .tpl-empty{font-size:11px;color:#b0b4c4;margin-top:6px}
+.tpl-cell .tpl-preview{font-size:11px;color:#5f6074;margin-top:4px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+
+/* ── Step 3: 3-column drag layout ── */
+.drag-layout{display:grid;grid-template-columns:300px minmax(300px,1fr) 420px;gap:14px;min-height:560px}
+@media(max-width:1100px){.drag-layout{grid-template-columns:1fr}}
+.drag-col{background:#f7f8fc;border:1px solid #e6e9f2;border-radius:12px;overflow:hidden;display:flex;flex-direction:column}
+.drag-col .col-head{padding:12px 14px;font-weight:700;font-size:14px;border-bottom:1px solid #e6e9f2;background:#fff;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px}
+.drag-col .col-body{padding:10px;overflow-y:auto;flex:1}
+.drag-item{padding:10px 12px;background:#fff;border:1px solid #e0e4ec;border-radius:8px;margin-bottom:6px;cursor:grab;font-size:13px;display:flex;justify-content:space-between;align-items:center}
+.drag-item:hover{border-color:#4361ee}
+.drag-item.dragging{opacity:.4}
+.drag-item .seq{background:#e63946;color:#fff;width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;margin-right:8px;flex-shrink:0}
+.drag-item .seq.no-geo{background:#adb5bd}
+.kunj-container{display:flex;flex-direction:column;gap:6px}
+.empty-drop{padding:30px;text-align:center;color:#8e8ea0;border:2px dashed #d0d5dd;border-radius:10px}
+.no-geo-badge{font-size:10px;color:#6c6c80;background:#eceef5;padding:1px 6px;border-radius:8px;margin-left:6px}
+
+/* Address cascade filter */
+.cascade{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.cascade select{padding:6px 8px;border:1.5px solid #e0e2eb;border-radius:8px;font-size:12px;background:#fff;max-width:150px}
+.cascade-chip{display:inline-flex;align-items:center;gap:4px;font-size:11px;background:#eef2ff;color:#4361ee;padding:2px 9px;border-radius:12px;cursor:pointer}
+.cascade-chip .x{font-weight:700}
+
+/* Map */
+.map-col .col-body{padding:0;position:relative;overflow:hidden}
+#routeMap{width:100%;height:560px;z-index:1}
+#mapNoData{display:none;position:absolute;inset:0;background:rgba(255,255,255,.92);align-items:center;justify-content:center;text-align:center;color:#8e8ea0;font-size:13px;z-index:400;flex-direction:column;gap:6px}
+.route-num{width:26px;height:26px;border-radius:50%;background:#e63946;color:#fff;border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;box-shadow:0 2px 6px rgba(0,0,0,.35)}
+.location-banner{font-size:11px;color:#0a7c42;background:#e6f7ec;border-radius:10px;padding:2px 10px;font-weight:600}
+.savebar{display:flex;gap:8px;align-items:center}
+</style>
+</head>
+<body data-page="plan-edit">
+<div id="appHeader"></div>
+<div class="container">
+  <div class="error-bar" id="errorBar"></div>
+  <div class="toast" id="toast"></div>
+  <div class="page-title">✏️ Edit List Kunjungan <span class="sub" id="stepTitle">Pilih Sales</span></div>
+
+  <!-- STEP 1: Sales list -->
+  <div class="step active" id="step1">
+    <div class="card">
+      <div class="card-header"><h3>👥 Daftar Sales</h3></div>
+      <div class="filters">
+        <label>Region</label><select id="fRegion" onchange="loadSales()"><option value="">Semua</option></select>
+        <label>Depo</label><select id="fDepot" onchange="loadSales()"><option value="">Semua</option></select>
+        <label>Cari</label><input type="text" id="fQ" placeholder="Nama / email" onchange="loadSales()">
+      </div>
+      <div class="card-body">
+        <div class="loading" id="salesLoading">Memuat sales...</div>
+        <table id="salesTable" style="display:none">
+          <thead><tr><th>Sales</th><th>Email</th><th>Depo</th><th>Region</th><th>Pilih</th></tr></thead>
+          <tbody id="salesBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 2: Template grid (Day1-Wk1 .. Day6-Wk4, monthly repeating) -->
+  <div class="step" id="step2">
+    <div class="breadcrumb">
+      <span class="crumb done" onclick="showStep(1)">Sales: <b id="bcSales">-</b></span><span class="sep">›</span>
+      <span class="crumb" id="bcStep2label">Pilih Slot</span>
+    </div>
+    <div class="card">
+      <div class="card-header"><h3>🗓️ Template Rute Bulanan — <span id="calSalesName">-</span></h3>
+        <span class="muted">day1-week1 … day6-week4 · berulang setiap bulan</span>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap">
+          <button class="btn btn-outline btn-sm" onclick="shiftRefMonth(-1)">‹</button>
+          <span style="font-weight:700;min-width:110px;text-align:center" id="refMonthLabel">-</span>
+          <button class="btn btn-outline btn-sm" onclick="shiftRefMonth(1)">›</button>
+          <span class="muted" style="font-size:11px">(tanggal per sel sesuai bulan ini)</span>
+        </div></div>
+      <div class="card-body">
+        <div class="tpl-grid" id="tplGrid"></div>
+        <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+          <span class="muted">Klik satu slot untuk mengatur rute toko sales tersebut. Setiap hari berbeda region.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 3: Slot editor — available (filtered) + ordered list + live map -->
+  <div class="step" id="step3">
+    <div class="breadcrumb">
+      <span class="crumb done" onclick="showStep(1)">Sales: <b id="bcSales2">-</b></span><span class="sep">›</span>
+      <span class="crumb done" onclick="showStep(2)">Slot: <b id="bcSlotLabel">-</b></span><span class="sep">›</span>
+      <span class="crumb">Atur Rute</span>
+    </div>
+    <div class="drag-layout">
+      <!-- LEFT: available stores with cascading address filter -->
+      <div class="drag-col">
+        <div class="col-head">🏬 Toko Tersedia</div>
+        <div class="col-body">
+          <input type="text" id="dSearch" placeholder="🔍 Cari nama toko" style="width:100%;padding:8px;border:1.5px solid #e0e2eb;border-radius:8px;margin-bottom:8px" oninput="renderAvailable()">
+          <div class="cascade">
+            <select id="fProv" onchange="onProv()"><option value="">Provinsi</option></select>
+            <select id="fKota" disabled onchange="onKota()"><option value="">Kota/Kab</option></select>
+            <select id="fKec" disabled onchange="onKec()"><option value="">Kecamatan</option></select>
+            <select id="fKel" disabled onchange="onKel()"><option value="">Kelurahan</option></select>
+          </div>
+          <div class="cascade" id="cascadeChips"></div>
+          <div style="height:10px"></div>
+          <div id="availableList"></div>
+        </div>
+      </div>
+      <!-- MIDDLE: numbered kunjungan list -->
+      <div class="drag-col">
+        <div class="col-head" style="background:#fff8f8">📍 Rute Slot <span id="slotNameHead" class="muted"></span>
+          <div class="savebar">
+            <span class="location-banner" id="geoBanner">0 toko berpeta</span>
+            <button class="btn btn-success" id="btnSave" onclick="saveSlot()">💾 Simpan Slot</button>
+          </div>
+        </div>
+        <div class="col-body">
+          <div class="kunj-container" id="kunjList"></div>
+        </div>
+      </div>
+      <!-- RIGHT: live route map -->
+      <div class="drag-col map-col">
+        <div class="col-head">🗺️ Rute Langsung <span id="mapPlanCount" class="muted"></span></div>
+        <div class="col-body" style="padding:0;position:relative">
+          <div id="routeMap"></div>
+          <div id="mapNoData"><div style="font-size:28px">📍</div><div>Belum ada toko berpeta di slot ini</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const ADMIN_KEY='wim_admin_token';
+try{const u=JSON.parse(sessionStorage.getItem('admin_user')||'{}');if(document.getElementById('userName'))document.getElementById('userName').textContent=u.name||'-';if(document.getElementById('userRole'))document.getElementById('userRole').textContent=u.role||'-'}catch(e){}
+async function api(path,opts){const r=await fetch(path,{credentials:'same-origin',headers:{'Accept':'application/json','Content-Type':'application/json'},...opts});if(r.status===401){logout();throw new Error('Sesi habis')}const d=await r.json();if(!r.ok)throw new Error(d.error||'Gagal');return d}
+function logout(){localStorage.removeItem(ADMIN_KEY);sessionStorage.removeItem('admin_user');fetch('/api/admin/logout',{method:'POST',credentials:'same-origin'}).catch(()=>{});location.href='index.html'}
+function showToast(m,t){const e=document.getElementById('toast');e.textContent=m;e.className='toast toast-'+t;e.style.display='block';e.style.visibility='visible';e.style.opacity='1';clearTimeout(e._t);e._t=setTimeout(()=>{e.style.display='none'},3800)}
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(m){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]})}
+
+let OPTS={users:[],regions:[],depots:[]};
+let allSales=[], selectedSales=null;
+let currentSlot=null;      // {week, day}
+let slotTemplates=[];      // 24 slots from /plan/templates
+let refYM={y:0,m:0};       // reference year/month shown on the grid (date context)
+let available=[];          // store picker (filtered)
+let planStores=[];         // ordered slot stores [{uuid,name,address,city,latitude,longitude,province_id,city_id,kecamatan_id,kelurahan_id,kecamatan,kelurahan,province}]
+let allAvailableRaw=[];    // all available (for client-side cascade filter)
+let cascadeSel={prov:'',kota:'',kec:'',kel:''};
+let wilCitiesByProv={}, wilKecByKota={}, wilKelByKec={};
+
+function showStep(n){[1,2,3].forEach(i=>document.getElementById('step'+i).classList.toggle('active',i===n));
+  document.getElementById('stepTitle').textContent = n===1?'Pilih Sales':(n===2?'Pilih Slot (Template Bulanan)':'Atur Rute Slot');
+  if(n===3){ setTimeout(()=>{ ensureRouteMap(); invalidateMap(); },60); }}
+function showError(msg){document.getElementById('errorBar').textContent=msg;document.getElementById('errorBar').style.display='block';}
+function clearError(){document.getElementById('errorBar').style.display='none';}
+
+async function init(){
+  try{OPTS=await api('/api/admin/filter-options')}catch(e){}
+  const rsel=document.getElementById('fRegion'); rsel.innerHTML='<option value="">Semua</option>'+(OPTS.regions||[]).map(r=>`<option value="${r.id}">${esc(r.name)}</option>`).join('');
+  const dsel=document.getElementById('fDepot'); dsel.innerHTML='<option value="">Semua</option>'+(OPTS.depots||[]).map(d=>`<option value="${d.id}">${esc(d.name)}</option>`).join('');
+  loadProv(); // populate the Provinsi filter dropdown
+  loadSales();
+}
+async function loadProv(){
+  try{
+    const d=await api('/api/admin/wilayah?level=prov');
+    document.getElementById('fProv').innerHTML='<option value="">Semua Provinsi</option>'+(d.rows||[]).map(x=>`<option value="${x.kode}">${esc(x.nama)}</option>`).join('');
+  }catch(e){}
+}
+
+async function loadSales(){
+  clearError();
+  document.getElementById('salesLoading').style.display='';
+  document.getElementById('salesTable').style.display='none';
+  const region=document.getElementById('fRegion').value, depot=document.getElementById('fDepot').value, q=(document.getElementById('fQ').value||'').toLowerCase();
+  try{
+    const d=await api('/api/admin/users?role=sales');
+    let list=(d.users||[]).map(u=>({id:u.id,name:u.name,email:u.email,depot:u.depot_name||'',region:u.region_name||''}));
+    if(region){const rn=String((OPTS.regions.find(r=>r.id==region)||{}).name||'');list=list.filter(u=>u.region===rn);}
+    if(depot){const dn=(OPTS.depots.find(x=>x.id==depot)||{}).name||'';list=list.filter(u=>u.depot===dn);}
+    if(q)list=list.filter(u=>(u.name||'').toLowerCase().includes(q)||(u.email||'').toLowerCase().includes(q));
+    allSales=list; renderSales();
+  }catch(e){showError('Gagal memuat sales: '+e.message)}
+}
+function renderSales(){
+  const tb=document.getElementById('salesBody'), t=document.getElementById('salesTable'), l=document.getElementById('salesLoading');
+  l.style.display='none';
+  if(!allSales.length){tb.innerHTML='<tr><td colspan="5" style="text-align:center;padding:20px;color:#8e8ea0">Tidak ada sales</td></tr>';t.style.display='';return;}
+  t.style.display='';
+  tb.innerHTML=allSales.map(s=>`<tr class="clickable" onclick="pickSales(${s.id})">
+    <td><b>${esc(s.name||'-')}</b></td><td class="muted">${esc(s.email||'-')}</td><td>${esc(s.depot||'-')}</td><td>${esc(s.region||'-')}</td>
+    <td><button class="btn btn-outline btn-sm" onclick="event.stopPropagation();pickSales(${s.id})">Pilih</button></td></tr>`).join('');
+}
+function pickSales(sid){
+  selectedSales=allSales.find(x=>x.id===sid); if(!selectedSales)return;
+  document.getElementById('calSalesName').textContent=selectedSales.name;
+  document.getElementById('bcSales').textContent=selectedSales.name;
+  document.getElementById('bcSales2').textContent=selectedSales.name;
+  loadTemplateGrid(); showStep(2)
+  initRefMonth();
+}
+
+// ── Step 2: 4x6 template grid ──
+async function loadTemplateGrid(){
+  try{
+    const d=await api('/api/admin/plan/templates?user_id='+selectedSales.id);
+    slotTemplates = buildSlots(d.slots||[]);
+    renderTplGrid();
+  }catch(e){showError('Gagal memuat template: '+e.message)}
+}
+function buildSlots(slots){
+  // slots from API may have empty week/day for unused ones; build full 24 with count
+  const map={}; slots.forEach(s=>{ if(s.week!==''&&s.day!=='') map[s.week+'-'+s.day]={count:s.count||0,templateId:s.templateId}; });
+  const out=[];
+  for(let w=1;w<=4;w++)for(let d=1;d<=6;d++)out.push({week:w,day:d,count:(map[w+'-'+d]||{}).count||0,templateId:(map[w+'-'+d]||{}).templateId||null});
+  return out;
+}
+
+// ── Reference-month helpers (date context on the template grid) ──
+const MONTHS_ID=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+const DOW_SATU=['Sen','Sel','Rab','Kam','Jum','Sab'];
+function initRefMonth(){ const n=new Date(); refYM={y:n.getFullYear(), m:n.getMonth()+1}; renderRefMonth(); }
+function shiftRefMonth(d){ refYM.m+=d; if(refYM.m<1){refYM.m=12;refYM.y--;} if(refYM.m>12){refYM.m=1;refYM.y++;} renderRefMonth(); }
+function renderRefMonth(){ const lbl=document.getElementById('refMonthLabel'); if(lbl) lbl.textContent=refYM.y+' '+MONTHS_ID[refYM.m-1]; renderTplGrid(); }
+// date(s) of month for a cell (week w, day d); dow 1=Mon..6=Sat (Sun skipped).
+// Backend: week=LEAST(CEIL(day/7),4); dow=ISODOW. Returns [date,...] first occurrence.
+function cellDates(w,d){
+  const y=refYM.y, m=refYM.m, dim=new Date(y,m,0).getDate();
+  const out=[];
+  for(let day=1; day<=dim; day++){
+    const dow=new Date(y,m-1,day).getDay(); // 0=Sun..6=Sat
+    if(dow===0) continue;                    // Sunday -> no slot
+    const iso=(dow===0?7:dow);               // 1=Mon..7=Sun
+    const wk=Math.min(Math.ceil(day/7),4);
+    if(wk===w && iso===d) out.push(new Date(y,m-1,day));
+  }
+  return out;
+}
+function fmtCellDate(dt){
+  return DOW_SATU[dt.getDay()-1]+' '+String(dt.getDate()).padStart(2,'0')+' '+MONTHS_ID[dt.getMonth()];
+}
+function cellDateLabel(w,d){
+  const ds=cellDates(w,d);
+  if(!ds.length) return '—';
+  let s=fmtCellDate(ds[0]);
+  if(ds.length>1) s+=' ±'; // week-4 overhang (29-31) can hold 2 matching weekdays
+  return s;
+}
+function renderTplGrid(){
+  const g=document.getElementById('tplGrid');
+  let html='<div class="tpl-corner">Minggu \\ Hari</div>';
+  for(let d=1;d<=6;d++)html+=`<div class="tpl-dayhead">Hari ${d}</div>`;
+  for(let w=1;w<=4;w++){
+    html+=`<div class="tpl-weeklabel">Minggu ${w}</div>`;
+    for(let d=1;d<=6;d++){
+      const s=slotTemplates.find(x=>x.week===w&&x.day===d)||{count:0};
+      const preview=s._preview||'';
+      const cls=currentSlot&&currentSlot.week===w&&currentSlot.day===d?'active':'';
+      html+=`<div class="tpl-cell ${cls}" data-slot="${w}-${d}" onclick="selectSlot(${w},${d})">
+        <div class="tpl-slotname">Hari${d}-Minggu${w}</div>
+        ${s.count>0?`<span class="tpl-count">${s.count} toko</span><div class="tpl-preview">${esc(preview)}</div>`:'<div class="tpl-empty">+ tambah toko</div>'}
+        <div class="tpl-date">${cellDateLabel(w,d)}</div>
+      </div>`;
+    }
+  }
+  g.innerHTML=html;
+}
+function selectSlot(week,day){
+  currentSlot={week,day};
+  document.getElementById('bcSlotLabel').textContent='Hari'+day+'-Minggu'+week;
+  document.getElementById('slotNameHead').textContent='Hari'+day+'-Minggu'+week;
+  document.querySelectorAll('.tpl-cell').forEach(c=>c.classList.toggle('active',parseInt(c.dataset.slot.split('-')[0],10)===week&&parseInt(c.dataset.slot.split('-')[1],10)===day));
+  openSlotEditor();
+}
+async function openSlotEditor(){
+  showStep(3);
+  try{
+    const d=await api('/api/admin/plan/template?user_id='+selectedSales.id+'&week='+currentSlot.week+'&day='+currentSlot.day);
+    planStores=(d.stores||[]).map(s=>normStore(s));
+    allAvailableRaw=(d.available||[]).map(s=>normStore(s));
+    available=[...allAvailableRaw];
+    renderKunj(); renderAvailable(); renderRouteMap();
+  }catch(e){showError('Gagal memuat slot: '+e.message)}
+}
+function normStore(s){
+  return {uuid:s.uuid,name:s.name,address:s.address||'',city:s.city||'',latitude:s.latitude,longitude:s.longitude,
+    province_id:s.province_id||'',city_id:s.city_id||'',kecamatan_id:s.kecamatan_id||'',kelurahan_id:s.kelurahan_id||'',
+    kecamatan:s.kecamatan||'',kelurahan:s.kelurahan||'',province:s.province||'',seq:s.seq||0};
+}
+
+// ── Cascading address filter (provinsi→kota→kecamatan→kelurahan) ──
+async function onProv(){
+  const pv=document.getElementById('fProv').value; cascadeSel.prov=pv; cascadeSel.kota=cascadeSel.kec=cascadeSel.kel='';
+  const k=document.getElementById('fKota'); k.value=''; k.disabled=!pv;
+  document.getElementById('fKec').innerHTML='<option value="">Kecamatan</option>'; document.getElementById('fKec').disabled=true;
+  document.getElementById('fKel').innerHTML='<option value="">Kelurahan</option>'; document.getElementById('fKel').disabled=true;
+  if(pv){
+    const d=await fetchWilayah('kab',pv);
+    k.innerHTML='<option value="">Semua Kota/Kab</option>'+d.map(x=>`<option value="${x.kode}">${esc(x.nama)}</option>`).join('');
+  }
+  renderChips(); renderAvailable();
+}
+async function onKota(){
+  const kt=document.getElementById('fKota').value; cascadeSel.kota=kt; cascadeSel.kec=cascadeSel.kel='';
+  const kc=document.getElementById('fKec'); kc.value=''; kc.disabled=!kt;
+  document.getElementById('fKel').innerHTML='<option value="">Kelurahan</option>'; document.getElementById('fKel').disabled=true;
+  if(kt){const d=await fetchWilayah('kec',kt); kc.innerHTML='<option value="">Semua Kecamatan</option>'+d.map(x=>`<option value="${x.kode}">${esc(x.nama)}</option>`).join('');}
+  renderChips(); renderAvailable();
+}
+async function onKec(){
+  const kc=document.getElementById('fKec').value; cascadeSel.kec=kc; cascadeSel.kel='';
+  const kl=document.getElementById('fKel'); kl.value=''; kl.disabled=!kc;
+  if(kc){const d=await fetchWilayah('kel',kc); kl.innerHTML='<option value="">Semua Kelurahan</option>'+d.map(x=>`<option value="${x.kode}">${esc(x.nama)}</option>`).join('');}
+  renderChips(); renderAvailable();
+}
+function onKel(){cascadeSel.kel=document.getElementById('fKel').value;renderChips();renderAvailable();}
+async function fetchWilayah(level,parent){
+  try{const d=await api('/api/admin/wilayah?level='+level+'&parent='+parent);return d.rows||[];}catch(e){return[];}
+}
+function renderChips(){
+  const el=document.getElementById('cascadeChips');
+  const names=[]; let all='';
+  const pv=cascadeSel.prov,kt=cascadeSel.kota,kc=cascadeSel.kec,kl=cascadeSel.kel;
+  if(pv){const opt=[...document.querySelectorAll('#fProv option')].find(o=>o.value===pv); if(opt)names.push(['prov',opt.textContent]);}
+  if(kt){const opt=[...document.querySelectorAll('#fKota option')].find(o=>o.value===kt); if(opt)names.push(['kota',opt.textContent]);}
+  if(kc){const opt=[...document.querySelectorAll('#fKec option')].find(o=>o.value===kc); if(opt)names.push(['kec',opt.textContent]);}
+  if(kl){const opt=[...document.querySelectorAll('#fKel option')].find(o=>o.value===kl); if(opt)names.push(['kel',opt.textContent]);}
+  el.innerHTML=(names.length?names.map(([k,n],i)=>`<span class="cascade-chip">${esc(n)} <span class="x" onclick="clearChip('${k}')">✕</span></span>`).join(' '):'');
+}
+function clearChip(k){ if(k==='prov'){document.getElementById('fProv').value='';onProv();} if(k==='kota'){document.getElementById('fKota').value='';onKota();} if(k==='kec'){document.getElementById('fKec').value='';onKec();} if(k==='kel'){document.getElementById('fKel').value='';onKel();} }
+
+// ── Available list + filter ──
+function renderAvailable(){
+  const q=(document.getElementById('dSearch').value||'').toLowerCase();
+  const el=document.getElementById('availableList');
+  let list=allAvailableRaw.filter(s=>!planStores.some(p=>p.uuid===s.uuid));
+  if(q)list=list.filter(s=>(s.name||'').toLowerCase().includes(q)||(s.kota||s.kecamatan||'').toLowerCase().includes(q));
+  if(cascadeSel.kel)list=list.filter(s=>s.kelurahan_id===cascadeSel.kel);
+  else if(cascadeSel.kec)list=list.filter(s=>s.kecamatan_id===cascadeSel.kec);
+  else if(cascadeSel.kota)list=list.filter(s=>s.city_id===cascadeSel.kota);
+  else if(cascadeSel.prov)list=list.filter(s=>s.province_id===cascadeSel.prov);
+  if(!list.length){el.innerHTML='<div class="empty-drop">Belum ada toko cocok</div>';return;}
+  el.innerHTML=list.map(s=>`<div class="drag-item" draggable="true" data-uuid="${s.uuid}" ondragstart="drag(ev,'left','${s.uuid}')">
+    <div><b>${esc(s.name)}</b><br><span class="muted">${esc([s.kecamatan,s.kelurahan].filter(Boolean).join(' · ')||s.city||'')}</span></div>
+    <button class="btn btn-outline btn-sm" onclick="addToSlot('${s.uuid}')" title="Tambah">+</button></div>`).join('');
+}
+// ── Ordered kunjungan list ──
+function renderKunj(){
+  const el=document.getElementById('kunjList');
+  if(!planStores.length){el.innerHTML='<div class="empty-drop">⬇️ Tambah toko dari kiri — urutan = rute</div>';return;}
+  el.innerHTML=planStores.map((s,i)=>{
+    const nogeo=(s.latitude==null||s.longitude==null)?' no-geo':'';
+    return `<div class="drag-item" draggable="true" data-uuid="${s.uuid}" ondragstart="drag(ev,'right','${s.uuid}')">
+    <div><span class="seq${nogeo}" title="${s.latitude==null?'Tidak berpeta':''}">${i+1}</span><b>${esc(s.name)}</b>${s.latitude==null?'<span class="no-geo-badge">📍 tak berpeta</span>':''}<br>
+      <span class="muted">${esc([s.address,s.kecamatan,s.kelurahan].filter(Boolean).join(' · '))}</span></div>
+    <div style="display:flex;gap:4px;align-items:center">
+      <button class="btn btn-outline btn-sm" onclick="moveKunj(${i},-1,event)" ${i===0?'disabled':''}>▲</button>
+      <button class="btn btn-outline btn-sm" onclick="moveKunj(${i},1,event)" ${i===planStores.length-1?'disabled':''}>▼</button>
+      <button class="btn btn-outline btn-sm" onclick="removeFromSlot('${s.uuid}')">✕</button>
+    </div></div>`;
+  }).join('');
+}
+function moveKunj(idx,dir,e){ if(e)e.stopPropagation(); const to=idx+dir; if(to<0||to>=planStores.length)return; const t=planStores[idx];planStores[idx]=planStores[to];planStores[to]=t;renderKunj();scheduleRender(); }
+function addToSlot(uuid){ const s=allAvailableRaw.find(x=>x.uuid===uuid); if(!s)return; planStores.push({...s,seq:planStores.length+1}); renderKunj();renderAvailable();scheduleRender(); }
+function removeFromSlot(uuid){ planStores=planStores.filter(x=>x.uuid!==uuid); renderKunj();renderAvailable();scheduleRender(); }
+function drag(ev,side,id){ ev.dataTransfer.setData('text/plain',id); ev.target.classList.add('dragging'); }
+document.addEventListener('dragover',e=>e.preventDefault());
+document.addEventListener('drop',function(e){ e.preventDefault(); const id=e.dataTransfer.getData('text/plain'); if(id)addToSlot(id); });
+// ── Save slot ──
+async function saveSlot(){
+  if(!currentSlot){showToast('Pilih slot dulu','warning');return;}
+  const body={user_id:selectedSales.id,week:currentSlot.week,day:currentSlot.day,stores:planStores.map(s=>s.uuid)};
+  const btn=document.getElementById('btnSave');
+  const old=btn.innerHTML; btn.disabled=true; btn.innerHTML='⏳ Menyimpan...';
+  try{
+    const d=await api('/api/admin/plan/template',{method:'POST',body:JSON.stringify(body)});
+    btn.innerHTML='✅ Tersimpan'; setTimeout(()=>{btn.innerHTML=old;btn.disabled=false},1200);
+    showToast('✅ Slot Hari'+currentSlot.day+'-Minggu'+currentSlot.week+' disimpan ('+d.saved+' toko)','success');
+    loadTemplateGrid();
+  }catch(e){btn.innerHTML=old;btn.disabled=false;showToast('❌ '+e.message,'error')}
+}
+
+// ── Leaflet route map (live, synced with list order) ──
+let rtMap=null, rtRouteLayer=null, _rtTimer=null;
+function ensureRouteMap(){
+  if(rtMap)return;
+  if(typeof L==='undefined')return;
+  const el=document.getElementById('routeMap');
+  rtMap=L.map(el,{scrollWheelZoom:false}).setView([-6.2088,106.8456],11);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; OpenStreetMap'}).addTo(rtMap);
+  rtRouteLayer=L.layerGroup().addTo(rtMap);
+}
+function invalidateMap(){ if(rtMap)setTimeout(()=>rtMap.invalidateSize(),100); }
+function scheduleRender(){ if(_rtTimer)clearTimeout(_rtTimer); _rtTimer=setTimeout(()=>{_rtTimer=null;renderRouteMap();},150); }
+function renderRouteMap(){
+  ensureRouteMap(); if(rtRouteLayer)rtRouteLayer.clearLayers();
+  const geoC=planStores.filter(s=>s.latitude!=null&&s.longitude!=null);
+  const noData=document.getElementById('mapNoData');
+  if(noData)noData.style.display=geoC.length?'none':'flex';
+  const geoBanner=document.getElementById('geoBanner'); if(geoBanner)geoBanner.textContent=planStores.length+' toko · '+geoC.length+' berpeta';
+  const cnt=document.getElementById('mapPlanCount'); if(cnt)cnt.textContent=planStores.length+' toko · '+geoC.length+' berpeta';
+  if(!rtMap||!rtRouteLayer||!geoC.length)return;
+  // red polyline (segmented at null points)
+  const seg=[];let cur=[];
+  planStores.forEach(s=>{ if(s.latitude!=null&&s.longitude!=null){cur.push([s.latitude,s.longitude]);}else{if(cur.length>1)seg.push(cur);cur=[];} });
+  if(cur.length>1)seg.push(cur);
+  seg.forEach(c=>L.polyline(c,{color:'#e63946',weight:3,opacity:.85}).addTo(rtRouteLayer));
+  // numbered markers 1..N (full list order; no-geo skip but keep number)
+  const ll=[];
+  planStores.forEach((s,idx)=>{
+    if(s.latitude==null||s.longitude==null)return;
+    const n=idx+1; ll.push([s.latitude,s.longitude]);
+    const icon=L.divIcon({className:'',html:`<div class="route-num">${n}</div>`,iconSize:[26,26],iconAnchor:[13,13],popupAnchor:[0,-14],tooltipAnchor:[12,-14]});
+    const m=L.marker([s.latitude,s.longitude],{icon}).addTo(rtRouteLayer);
+    m.bindTooltip(`#${n} ${esc(s.name)}`,{direction:'top',sticky:true,opacity:1});
+    m.bindPopup(`<b>#${n} ${esc(s.name)}</b><br><span class="muted">${esc(s.address||'')}</span><br><span class="muted">📍 ${esc([s.kecamatan,s.kelurahan].filter(Boolean).join(' · ')||'')}</span>`);
+    m._listIdx=idx;
+  });
+  if(ll.length===1)rtMap.setView(ll[0],15); else if(ll.length>1)rtMap.fitBounds(L.latLngBounds(ll).pad(0.18));
+}
+document.addEventListener('DOMContentLoaded',()=>{ ensureRouteMap(); });
+init();
+</script>
+<div id="appFooter"></div>
+<script src="js/include.js"></script>
+</body>
+</html>

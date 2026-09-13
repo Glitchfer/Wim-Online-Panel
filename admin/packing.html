@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WIM Admin — Packing List (Dispatch)</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f0f2f5;color:#1a1a2e;font-size:14px}
+.container{max-width:1400px;margin:0 auto;padding:24px}
+.page-title{font-size:20px;font-weight:700;margin-bottom:6px}
+.page-title .sub{font-size:13px;color:#8e8ea0;font-weight:400}
+.filters{display:flex;gap:10px;margin-bottom:16px;align-items:center;flex-wrap:wrap;background:#fff;padding:12px 16px;border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,.04)}
+.filters label{font-size:12px;font-weight:600;color:#6c6c80;white-space:nowrap}
+.filters input,.filters select{padding:7px 10px;border:1.5px solid #e0e0e8;border-radius:8px;font-size:13px;background:#fff}
+.filters input:focus,.filters select:focus{outline:none;border-color:#4361ee}
+.filters .sep{width:1px;height:26px;background:#e0e0e8}
+.btn{padding:8px 16px;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer}
+.btn-primary{background:#0a7c42;color:#fff}
+.btn-primary:disabled{opacity:.6;cursor:not-allowed}
+.btn-outline{background:#fff;color:#1a1a2e;border:1.5px solid #dcdfe8}
+.card{background:#fff;border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,.04)}
+.card-tabs{display:flex;gap:4px;padding:12px 16px 0;border-bottom:1px solid #eef0f4}
+.card-tab{padding:9px 18px;border:none;background:transparent;color:#6c6c80;font-size:13px;font-weight:600;cursor:pointer;border-bottom:3px solid transparent}
+.card-tab.active{color:#0a7c42;border-bottom-color:#0a7c42}
+.card-tab-btn{position:relative;top:1px;padding:9px 18px;font-size:13px;font-weight:600;cursor:pointer;background:transparent;border:none;border-bottom:3px solid transparent;color:#6c6c80}
+.card-tab-btn.active{color:#0a7c42;border-bottom-color:#0a7c42}
+.card-body{overflow-x:auto;padding:16px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{padding:10px 14px;text-align:left;font-weight:600;color:#6c6c80;font-size:11px;text-transform:uppercase;letter-spacing:.5px;background:#fafbfc;border-bottom:1px solid #eef0f4}
+td{padding:10px 14px;border-bottom:1px solid #f0f2f5}
+tr:hover td{background:#f8f9fc}
+.loading{text-align:center;padding:40px;color:#8e8ea0}
+.empty-state{text-align:center;padding:40px;color:#8e8ea0}
+.saleslink{color:#0a7c42;font-weight:600;cursor:pointer;text-decoration:underline}
+.h-badge{display:inline-block;min-width:30px;text-align:center;padding:3px 9px;border-radius:20px;font-size:12px;font-weight:700}
+.h-green{background:#e3f7ea;color:#0a7c42}
+.h-yellow{background:#fff4d6;color:#b8860b}
+.h-red{background:#fde3e3;color:#c0392b}
+.hint{font-size:12px;color:#8e8ea0;margin:8px 0 4px}
+/* Modal */
+.modal{display:none;position:fixed;inset:0;background:rgba(15,20,40,.55);z-index:1000;align-items:center;justify-content:center}
+.modal.show{display:flex}
+.modal-inner{background:#fff;border-radius:14px;width:min(880px,94vw);max-height:88vh;display:flex;flex-direction:column;box-shadow:0 10px 40px rgba(0,0,0,.25)}
+.modal-head{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:1px solid #eef0f4;font-weight:700}
+.modal-head .x{cursor:pointer;color:#8e8ea0;font-size:18px}
+.modal-body{padding:16px 18px;overflow-y:auto}
+.modal-foot{display:flex;gap:10px;justify-content:flex-end;padding:13px 18px;border-top:1px solid #eef0f4;flex-wrap:wrap}
+dl.dbl{margin:0;padding:0}
+.dbl-row{display:grid;grid-template-columns:150px 1fr;gap:8px;padding:6px 0;border-bottom:1px solid #f0f2f5;font-size:13px}
+.dbl-row dt{color:#6c6c80;font-weight:600}
+.dbl-row dd{margin:0}
+.order-item{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 12px;border:1px solid #eef0f4;border-radius:10px;margin-bottom:8px;cursor:pointer;background:#fff}
+.order-item:hover{border-color:#0a7c42;background:#f6fbf7}
+.order-item .oi-main{flex:1}
+.order-item .oi-ref{font-weight:700;font-size:13px}
+.order-item .oi-sub{font-size:12px;color:#8e8ea0;margin-top:2px}
+.order-item .oi-right{text-align:right;white-space:nowrap}
+.order-item .oi-total{font-weight:700;color:#0a7c42}
+.oi-badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;background:#eef0f4;color:#6c6c80;margin-left:6px}
+.oi-badge.inv{background:#e3f7ea;color:#0a7c42}
+.dl-btns{display:flex;gap:10px;margin:12px 0 6px;flex-wrap:wrap}
+.dl-btn{display:inline-flex;align-items:center;gap:8px;padding:10px 18px;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;color:#fff;transition:transform .06s}
+.dl-btn:active{transform:scale(.96)}
+.dl-btn.pdf{background:#c0392b}
+.dl-btn.zip{background:#4361ee}
+.dl-btn:disabled{opacity:.6;cursor:not-allowed}
+/* invoice sheet (compact) */
+.inv-sheet{font-family:sans-serif;font-size:13px;color:#1a1a2e}
+.inv-sheet h3{margin:4px 0 8px}
+.inv-table{width:100%;border-collapse:collapse;margin-top:6px;font-size:12px}
+.inv-table th,.inv-table td{border-bottom:1px solid #e5e8ef;padding:7px 9px;text-align:left}
+.inv-table .num{text-align:right}
+.total-row td{font-weight:600}
+/* print hidden download button area */
+</style>
+</head>
+<body data-page="packing">
+<div id="appHeader"></div>
+<div class="container">
+  <div class="page-title">🚚 Packing List <span class="sub">Per-hari dispatch tiap sales, prioritas berdasar umur order</span></div>
+  <div class="filters">
+    <label>Dari</label><input type="date" id="fFrom" onchange="loadAll()">
+    <label>Sampai</label><input type="date" id="fTo" onchange="loadAll()">
+    <span class="sep"></span>
+    <label>Depo</label>
+    <select id="fDepot" onchange="loadAll()"><option value="">Semua</option></select>
+    <label>Sales</label>
+    <select id="fUser" onchange="loadAll()"><option value="">Semua</option></select>
+    <span class="sep"></span>
+    <button class="btn btn-primary" onclick="downloadCsv()">⬇ CSV</button>
+  </div>
+
+  <div class="card">
+    <div class="card-tabs">
+      <button class="card-tab active" data-tab="dispatch" onclick="switchTab('dispatch')">✅ Dispatch Per Hari (Dalam Rute)</button>
+      <button class="card-tab" data-tab="luar" onclick="switchTab('luar')">📍 Luar Rute</button>
+      <button class="card-tab" data-tab="sku" onclick="switchTab('sku')">📦 Muatan SKU</button>
+    </div>
+
+    <!-- Dispatch tab -->
+    <div class="card-body" id="tab-dispatch">
+      <div class="hint">Tiap baris = 1 hari pengiriman 1 sales (1 kendaraan). Klik nama sales untuk lihat order hari itu & cetak Surat Jalan/Invoice. Warna H: hijau=hari ini, kuning=H+1, merah=H+2+ (prioritas).</div>
+      <div class="loading" id="dLoading">Memuat...</div>
+      <table id="dTable" style="display:none">
+        <thead><tr><th>Sales Rep</th><th>Tanggal Order</th><th>H-</th><th>Total Qty (incl bonus)</th><th>Qty Berbayar</th><th>Jumlah Order</th></tr></thead>
+        <tbody id="dBody"></tbody>
+      </table>
+      <div class="empty-state" id="dEmpty" style="display:none">Tidak ada order dalam rute pada rentang ini</div>
+    </div>
+
+    <!-- Luar rute tab -->
+    <div class="card-body" id="tab-luar" style="display:none">
+      <div class="hint">Order luar rute (di luar rute sales) — dipisah dari dispatch dalam rute.</div>
+      <div class="loading" id="lLoading">Memuat...</div>
+      <table id="lTable" style="display:none">
+        <thead><tr><th>Sales Rep</th><th>Tanggal Order</th><th>H-</th><th>Total Qty (incl bonus)</th><th>Qty Berbayar</th><th>Jumlah Order</th></tr></thead>
+        <tbody id="lBody"></tbody>
+      </table>
+      <div class="empty-state" id="lEmpty" style="display:none">Tidak ada order luar rute pada rentang ini</div>
+    </div>
+
+    <!-- SKU tab (legacy) -->
+    <div class="card-body" id="tab-sku" style="display:none">
+      <div class="hint">Rekap volume per SKU untuk memuat kendaraan.</div>
+      <div class="loading" id="sLoading">Memuat...</div>
+      <table id="sTable" style="display:none">
+        <thead><tr><th>SKU</th><th>Produk</th><th>Total Qty</th><th>Bonus</th><th>Jumlah Order</th></tr></thead>
+        <tbody id="sBody"></tbody>
+      </table>
+      <div class="empty-state" id="sEmpty" style="display:none">Tidak ada data muatan SKU</div>
+    </div>
+  </div>
+</div>
+
+<!-- Popup: order list for one sales + day -->
+<div class="modal" id="dayModal">
+  <div class="modal-inner">
+    <div class="modal-head"><span id="dayTitle">Order Hari</span><span class="x" onclick="closeDayModal()">✕</span></div>
+    <div class="modal-body">
+      <div class="dl-btns">
+        <button class="dl-btn pdf" id="btnSJ" onclick="downloadSuratJalan()">📄 Cetak Surat Jalan (PDF)</button>
+        <button class="dl-btn zip" id="btnZip" onclick="downloadInvoiceZip()">🗜️ Cetak Invoice (ZIP)</button>
+      </div>
+      <div id="dayMsg" class="hint"></div>
+      <div id="dayOrderList"></div>
+    </div>
+    <div class="modal-foot"><button class="btn btn-outline" onclick="closeDayModal()">Tutup</button></div>
+  </div>
+</div>
+
+<!-- Invoice window (clickable order) -->
+<div class="modal" id="invModal">
+  <div class="modal-inner">
+    <div class="modal-head"><span>📄 Detail Pesanan</span><span class="x" onclick="closeInvModal()">✕</span></div>
+    <div class="modal-body"><div class="loading" id="invLoading">Memuat detail pesanan...</div><div id="invSheet" style="display:none"></div></div>
+    <div class="modal-foot">
+      <button class="btn btn-primary" onclick="invPrint()">🖨️ Print / PDF</button>
+      <button class="btn btn-outline" onclick="closeInvModal()">Tutup</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const ADMIN_KEY='wim_admin_token';
+let ROWS=[];              // dispatch rows
+let LUA=[];               // luar-rute rows
+let SROWS=[];             // sku rows
+let currentTab='dispatch';
+let curUser=''; let curDate='';
+let curDayOrders=[];
+try{const u=JSON.parse(sessionStorage.getItem('admin_user')||'{}');if(typeof document!=='undefined'&&document.getElementById('userName'))document.getElementById('userName').textContent=u.name||'-';if(typeof document!=='undefined'&&document.getElementById('userRole'))document.getElementById('userRole').textContent=u.role||'-'}catch(e){}
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(m){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]})}
+function num(v){return (v==null||v==='')?0:Number(v)}
+function fmtRp(n){return 'Rp '+Number(n||0).toLocaleString('id-ID')}
+function fmtDate(ts){if(!ts)return '-';const d=new Date(String(ts).replace(' ','T'));if(isNaN(d.getTime()))return ts;return d.toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'})+' '+d.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'})}
+async function api(p){const r=await fetch(p,{credentials:'same-origin',headers:{'Accept':'application/json'}});if(r.status===401){logout();throw new Error('Session expired')}const ct=r.headers.get('content-type')||'';if(ct.includes('application/json')){const d=await r.json();if(!r.ok)throw new Error(d.error||'API error');return d}throw new Error('Unexpected response')}
+function logout(){localStorage.removeItem(ADMIN_KEY);sessionStorage.removeItem('admin_user');fetch('/api/admin/logout',{method:'POST',credentials:'same-origin'}).catch(()=>{});location.href='index.html'}
+function setDate(id,daysAgo){const d=new Date();d.setDate(d.getDate()-daysAgo);document.getElementById(id).valueAsDate=d}
+function initDates(){if(!document.getElementById('fFrom').value)setDate('fFrom',30);if(!document.getElementById('fTo').value)setDate('fTo',0)}
+function buildQuery(){
+  const from=document.getElementById('fFrom').value,to=document.getElementById('fTo').value;
+  const p=new URLSearchParams();
+  if(from)p.set('date_from',from);if(to)p.set('date_to',to);
+  const dep=document.getElementById('fDepot').value;if(dep)p.set('depot_id',dep);
+  const usr=document.getElementById('fUser').value;if(usr)p.set('user_id',usr);
+  return p.toString();
+}
+async function loadOptions(){
+  try{
+    const d=await api('/api/admin/filter-options');
+    const depots=(d.depots||[]);const users=(d.users||[]);
+    const dsel=document.getElementById('fDepot');
+    const curDep=dsel.value; // preserve selection across rebuild
+    let dh='<option value="">Semua</option>';depots.forEach(x=>dh+='<option value="'+x.id+'">'+esc(x.name)+'</option>');
+    dsel.innerHTML=dh;
+    if(curDep) dsel.value=curDep;
+    const use2=document.getElementById('fUser');
+    const curUsr=use2.value;
+    let uh='<option value="">Semua</option>';users.forEach(x=>uh+='<option value="'+x.id+'">'+esc(x.name)+'</option>');
+    use2.innerHTML=uh;
+    if(curUsr) use2.value=curUsr;
+  }catch(e){}
+}
+function hBadge(r){
+  const c=r.statusClass==='h-red'?'H+'+r.h:(r.statusClass==='h-yellow'?'H+1':'Hari ini');
+  return '<span class="h-badge '+r.statusClass+'">'+c+'</span>';
+}
+function dispatchRow(r,luar){
+  const lr=luar?',1':'';
+  return '<tr><td><span class="saleslink" onclick="openDay(\''+r.userId+'\',\''+r.orderDate+'\',\''+esc(r.salesRep).replace(/'/g,"\\'")+'\''+lr+')">'+esc(r.salesRep)+'</span></td><td>'+esc(r.orderDate)+'</td><td>'+hBadge(r)+'</td><td>'+num(r.totalQty)+'</td><td>'+num(r.qtyPaid)+'</td><td>'+num(r.numOrders)+'</td></tr>';
+}
+async function loadDispatch(){
+  document.getElementById('dLoading').style.display='block';
+  document.getElementById('dTable').style.display='none';
+  document.getElementById('dEmpty').style.display='none';
+  try{
+    const d=await api('/api/admin/analytics/packing-grouped?'+buildQuery());
+    ROWS=d.rows||[];
+    document.getElementById('dLoading').style.display='none';
+    if(!ROWS.length){document.getElementById('dEmpty').style.display='block';return}
+    document.getElementById('dBody').innerHTML=ROWS.map(dispatchRow).join('');
+    document.getElementById('dTable').style.display='';
+  }catch(e){document.getElementById('dLoading').textContent='Error: '+e.message}
+}
+async function loadLuar(){
+  document.getElementById('lLoading').style.display='block';
+  document.getElementById('lTable').style.display='none';
+  document.getElementById('lEmpty').style.display='none';
+  try{
+    const d=await api('/api/admin/analytics/packing-luarrute?'+buildQuery());
+    LUA=d.rows||[];
+    document.getElementById('lLoading').style.display='none';
+    if(!LUA.length){document.getElementById('lEmpty').style.display='block';return}
+    document.getElementById('lBody').innerHTML=LUA.map(r=>dispatchRow(r,true)).join('');
+    document.getElementById('lTable').style.display='';
+  }catch(e){document.getElementById('lLoading').textContent='Error: '+e.message}
+}
+async function loadSku(){
+  document.getElementById('sLoading').style.display='block';
+  document.getElementById('sTable').style.display='none';
+  document.getElementById('sEmpty').style.display='none';
+  try{
+    const d=await api('/api/admin/analytics/packing-list?'+buildQuery());
+    SROWS=d.rows||[];
+    document.getElementById('sLoading').style.display='none';
+    if(!SROWS.length){document.getElementById('sEmpty').style.display='block';return}
+    document.getElementById('sBody').innerHTML=SROWS.map(r=>'<tr><td>'+esc(r.sku||'-')+'</td><td>'+esc(r.productName)+'</td><td>'+num(r.qtyTotal)+'</td><td>'+esc(r.qtyBonus?'+'+r.qtyBonus:'-')+'</td><td>'+num(r.numOrders)+'</td></tr>').join('');
+    document.getElementById('sTable').style.display='';
+  }catch(e){document.getElementById('sLoading').textContent='Error: '+e.message}
+}
+function loadAll(){loadOptions();loadDispatch();loadLuar();loadSku()}
+function switchTab(t){
+  currentTab=t;
+  document.querySelectorAll('.card-tab').forEach(b=>b.classList.toggle('active',b.dataset.tab===t));
+  document.getElementById('tab-dispatch').style.display=t==='dispatch'?'':'none';
+  document.getElementById('tab-luar').style.display=t==='luar'?'':'none';
+  document.getElementById('tab-sku').style.display=t==='sku'?'':'none';
+}
+
+// ── Popup: one sales + day order list ──
+async function openDay(uid,date,rep,luar){
+  curUser=uid;curDate=date;
+  document.getElementById('dayTitle').textContent='🚚 Order '+rep+' — '+date;
+  document.getElementById('dayMsg').textContent='Memuat order...';
+  document.getElementById('dayOrderList').innerHTML='';
+  document.getElementById('dayModal').classList.add('show');
+  document.getElementById('btnSJ').disabled=true;
+  document.getElementById('btnZip').disabled=true;
+  try{
+    const lr=luar?'&luar_rute=1':'';
+    const d=await api('/api/admin/analytics/packing-day-orders?user_id='+uid+'&date='+date+lr);
+    const rows=d.rows||[];
+    curDayOrders=rows;
+    document.getElementById('btnSJ').disabled=!rows.length;
+    document.getElementById('btnZip').disabled=!rows.length;
+    if(!rows.length){document.getElementById('dayMsg').textContent='Tidak ada order pada hari ini.';return}
+    document.getElementById('dayMsg').textContent=rows.length+' order · urut berdasarkan waktu diterima';
+    document.getElementById('dayOrderList').innerHTML=rows.map(r=>{
+      const inv=r.has_invoice?'<span class="oi-badge inv">✓ invoice</span>':'';
+      return '<div class="order-item" onclick="openOrderDetail(\''+r.uuid+'\')">'+
+        '<div class="oi-main"><div class="oi-ref">'+esc(r.order_ref)+inv+'</div>'+
+        '<div class="oi-sub">'+esc(r.store_name||'-')+' · '+esc(r.store_kelurahan||'')+' · '+fmtDate(r.created_at)+'</div></div>'+
+        '<div class="oi-right"><div class="oi-total">'+fmtRp(r.grandTotal)+'</div><div class="oi-sub">'+num(r.itemsQty)+' pcs</div></div></div>';
+    }).join('');
+  }catch(e){document.getElementById('dayMsg').textContent='Error: '+e.message}
+}
+function closeDayModal(){document.getElementById('dayModal').classList.remove('show')}
+function downloadSuratJalan(){
+  const btn=document.getElementById('btnSJ');const old=btn.innerHTML;
+  btn.disabled=true;btn.innerHTML='⏳ Menyiapkan PDF...';
+  window.location.href='/api/admin/analytics/packing-surat-jalan?user_id='+curUser+'&date='+curDate;
+  setTimeout(function(){btn.disabled=false;btn.innerHTML=old},2500);
+}
+function downloadInvoiceZip(){
+  const btn=document.getElementById('btnZip');const old=btn.innerHTML;
+  btn.disabled=true;btn.innerHTML='⏳ Menyiapkan ZIP...';
+  window.location.href='/api/admin/analytics/packing-invoice-zip?user_id='+curUser+'&date='+curDate;
+  setTimeout(function(){btn.disabled=false;btn.innerHTML=old},2500);
+}
+
+// ── Invoice window (clickable order) ──
+let lastUuid='';
+async function openOrderDetail(uuid){
+  lastUuid=uuid;
+  const modal=document.getElementById('invModal');
+  const loading=document.getElementById('invLoading');const sheet=document.getElementById('invSheet');
+  modal.classList.add('show');loading.style.display='';sheet.style.display='none';
+  loading.textContent='Memuat detail pesanan...';
+  try{
+    const d=await api('/api/admin/orders/detail?uuid='+encodeURIComponent(uuid));
+    loading.style.display='none';
+    sheet.innerHTML=renderInvoice(d);sheet.style.display='';
+  }catch(e){loading.textContent='Gagal memuat detail: '+e.message}
+}
+function closeInvModal(){document.getElementById('invModal').classList.remove('show')}
+function invPrint(){
+  const sh=document.getElementById('invSheet');if(!sh||sh.style.display==='none')return;
+  const w=window.open('','','width=820,height=900');if(!w){window.print();return}
+  w.document.write('<html><head><title>Kupon Pesanan</title><style>body{font-family:sans-serif;font-size:13px;color:#1a1a2e;background:#fff;margin:20px}td,th{border-bottom:1px solid #ddd;padding:8px 10px;text-align:left}table{width:100%;border-collapse:collapse}.num{text-align:right}</style></head><body>'+sh.innerHTML+'</body></html>');
+  w.document.close();w.focus();w.print();
+}
+function renderInvoice(d){
+  const payMethod=d.paymentMethod==='credit'?'Kredit':(d.paymentMethod==='cod'?'COD':'Tunai');
+  const items=d.items||[];
+  let rows='';
+  if(!items.length){rows='<tr><td colspan="4" style="text-align:center;color:#8e8ea0;padding:14px">Belum ada item</td></tr>'}
+  else{rows=items.map(it=>{
+    const bonus=!!it.is_bonus;const name=esc(it.name||it.sku||'');
+    const price=it.price??it.unitPrice??0;
+    const qty=it.qty||0;
+    const lt=(it.total!=null)?Number(it.total):(qty*price);
+    if(bonus)return '<tr><td>'+name+'</td><td class="num">+'+qty+'</td><td class="num">Gratiis</td><td class="num">Rp 0</td></tr>';
+    return '<tr><td>'+name+'</td><td class="num">'+qty+'</td><td class="num">'+fmtRp(price)+'</td><td class="num">'+fmtRp(lt)+'</td></tr>';
+  }).join('')}
+  return '<div class="inv-sheet"><h3>KUPON PESANAN — belum dibayar</h3>'+
+    '<div><b>Toko:</b> '+esc(d.storeName||'-')+'<br><b>Sales:</b> '+esc(d.repName||'-')+'<br><b>No:</b> '+esc(d.orderId||'-')+'<br><b>Tanggal:</b> '+fmtDate(d.createdAt)+'<br><b>Bayar:</b> '+payMethod+'</div>'+
+    '<table class="inv-table"><thead><tr><th>Produk</th><th class="num">Qty</th><th class="num">Harga</th><th class="num">Total</th></tr></thead><tbody>'+rows+'</tbody>'+
+    '<tr class="total-row"><td colspan="3" style="text-align:right">GRAND TOTAL</td><td class="num">'+fmtRp(d.grandTotal)+'</td></tr></table></div>';
+}
+
+// ── CSV export (current tab) ──
+function csvEsc(s){s=String(s==null?'':s);return (s.indexOf(',')>=0||s.indexOf('"')>=0||s.indexOf('\n')>=0)?'"'+s.replace(/"/g,'""')+'"':s}
+function downloadCsv(){
+  let lines,file;
+  if(currentTab==='dispatch'){if(!ROWS.length){alert('Tidak ada data');return}
+    lines=['Sales Rep,Tanggal Order,H,Total Qty (incl bonus),Qty Berbayar,Jumlah Order'].concat(ROWS.map(r=>[r.salesRep,r.orderDate,r.h,r.totalQty,r.qtyPaid,r.numOrders].map(csvEsc).join(',')));
+    file='packing-dispatch.csv';}
+  else if(currentTab==='luar'){if(!LUA.length){alert('Tidak ada data');return}
+    lines=['Sales Rep,Tanggal Order,H,Total Qty (incl bonus),Qty Berbayar,Jumlah Order'].concat(LUA.map(r=>[r.salesRep,r.orderDate,r.h,r.totalQty,r.qtyPaid,r.numOrders].map(csvEsc).join(',')));
+    file='packing-luarrute.csv';}
+  else{if(!SROWS.length){alert('Tidak ada data');return}
+    lines=['SKU,Produk,Total Qty,Bonus,Jumlah Order'].concat(SROWS.map(r=>[r.sku,r.productName,r.qtyTotal,r.qtyBonus,r.numOrders].map(csvEsc).join(',')));
+    file='packing-sku.csv';}
+  const blob=new Blob(['\uFEFF'+lines.join('\n')],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=file;a.click();URL.revokeObjectURL(a.href);
+}
+function init(){initDates();loadAll()}
+init();
+</script>
+<div id="appFooter"></div>
+<script src="js/include.js"></script>
+</body>
+</html>

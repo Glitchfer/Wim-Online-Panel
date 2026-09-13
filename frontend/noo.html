@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>WIM Online — NOO Baru</title>
+<link rel="stylesheet" href="css/app.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+/* Searchable region dropdown (wilayah) component */
+.wilayah-dd{position:relative}
+.wilayah-dd .wilayah-search{cursor:pointer;background:#fff}
+.wilayah-list{max-height:220px;overflow-y:auto}
+.wilayah-panel{display:none;position:absolute;top:100%;left:0;right:0;z-index:60;background:#fff;border:1px solid #d0d5dd;border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,.15)}
+.wilayah-dd.open .wilayah-panel{display:block}
+.wilayah-search-query{width:100%;box-sizing:border-box;padding:10px 12px;border:none;border-bottom:1px solid #eef0f4;font-size:13px;outline:none;background:#fff}
+.wilayah-list .w-item{padding:10px 12px;font-size:13px;cursor:pointer;border-bottom:1px solid #f3f5f8}
+.wilayah-list .w-item:hover{background:#eef1f6}
+.wilayah-list .w-none{padding:12px;font-size:12px;color:#8e8ea0;text-align:center}
+.wilayah-list .w-load{padding:12px;font-size:12px;color:#8e8ea0;text-align:center}
+.form-hint{font-size:11px;color:#8e8ea0;margin-top:3px}
+</style>
+</head>
+<body>
+<div class="app-shell">
+  <header class="app-header">
+    <div class="header-row">
+      <button class="back-btn" onclick="history.back()">←</button>
+      <h1>NOO Baru</h1>
+      <span style="width:36px;"></span>
+    </div>
+    <div class="subtitle">WIM Online — New Outlet Opening</div>
+  </header>
+
+  <div class="main-content">
+    <div class="alert alert-info" id="infoAlert">Isi data toko baru. Field wajib ditandai *</div>
+    <div class="alert alert-success" id="successAlert" style="display:none;"></div>
+    <div class="alert alert-danger" id="errorAlert" style="display:none;"></div>
+
+    <div class="card">
+      <div class="form-section-title">Informasi Toko</div>
+
+      <div class="form-group">
+        <label class="form-label">Nama Toko *</label>
+        <input class="form-input" id="namaToko" placeholder="Contoh: TOKO MAJU JAYA">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Nama Pemilik *</label>
+        <input class="form-input" id="namaPemilik" placeholder="Nama lengkap pemilik">
+      </div>
+      <div class="form-group">
+        <label class="form-label">No. Handphone *</label>
+        <input class="form-input" id="noHp" type="tel" placeholder="6281xxxxxxxxx">
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div class="form-group">
+          <label class="form-label">Channel</label>
+          <select class="form-select" id="channel" onchange="updateChannelKategori()">
+            <option value="GT">GT (General Trade)</option>
+            <option value="MT">MT (Modern Trade)</option>
+            <option value="Horeka">Horeka</option>
+            <option value="Institutional">Institutional</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Kategori</label>
+          <select class="form-select" id="kategori">
+            <option value="">Pilih kategori...</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="form-section-title">Alamat (pilih dari kode wilayah resmi)</div>
+
+      <div class="form-group">
+        <label class="form-label">Provinsi *</label>
+        <div class="wilayah-dd" id="ddProvinsi">
+          <input class="form-input wilayah-search" id="provinsi" autocomplete="off" placeholder="Ketik / pilih provinsi..." readonly onfocus="openDD(this,'ddProvinsi','prov','')">
+          <input type="hidden" id="provinsiKode">
+          <div class="wilayah-panel">
+            <input class="wilayah-search-query" id="qProvinsi" placeholder="Ketik untuk cari...">
+            <div class="wilayah-list" id="listProvinsi"></div>
+          </div>
+        </div>
+        <div class="form-hint">Memuat provinsi...</div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div class="form-group">
+          <label class="form-label">Kota / Kabupaten *</label>
+          <div class="wilayah-dd" id="ddKota">
+            <input class="form-input wilayah-search" id="kota" autocomplete="off" placeholder="Pilih provinsi dulu" readonly onfocus="openDD(this,'ddKota','kab','')">
+            <input type="hidden" id="kotaKode">
+            <div class="wilayah-panel">
+              <input class="wilayah-search-query" id="qKota" placeholder="Ketik untuk cari...">
+              <div class="wilayah-list" id="listKota"></div>
+            </div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Kecamatan *</label>
+          <div class="wilayah-dd" id="ddKecamatan">
+            <input class="form-input wilayah-search" id="kecamatan" autocomplete="off" placeholder="Pilih kota dulu" readonly onfocus="openDD(this,'ddKecamatan','kec','')">
+            <input type="hidden" id="kecamatanKode">
+            <div class="wilayah-panel">
+              <input class="wilayah-search-query" id="qKecamatan" placeholder="Ketik untuk cari...">
+              <div class="wilayah-list" id="listKecamatan"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Kelurahan *</label>
+        <div class="wilayah-dd" id="ddKelurahan">
+          <input class="form-input wilayah-search" id="kelurahan" autocomplete="off" placeholder="Pilih kecamatan dulu" readonly onfocus="openDD(this,'ddKelurahan','kel','')">
+          <input type="hidden" id="kelurahanKode">
+          <div class="wilayah-panel">
+            <input class="wilayah-search-query" id="qKelurahan" placeholder="Ketik untuk cari...">
+            <div class="wilayah-list" id="listKelurahan"></div>
+          </div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Alamat Lengkap (jalan, no. rumah) *</label>
+        <textarea class="form-input" id="alamat" placeholder="Jl. ... (tanpa provinsi/kota, otomatis dari pilihan)"></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Kode Pos</label>
+        <input class="form-input" id="kodePos" type="number" placeholder="12345" oninput="autoKodePos()">
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="form-section-title">Lokasi GPS</div>
+      <button class="btn btn-primary btn-sm" onclick="ambilGPS()">📍 Ambil dari GPS</button>
+      <div style="height:8px;"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div class="form-group">
+          <label class="form-label">Latitude</label>
+          <input class="form-input" id="lat" readonly placeholder="-6.2088">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Longitude</label>
+          <input class="form-input" id="lng" readonly placeholder="106.8456">
+        </div>
+      </div>
+      <div id="gpsStatus" style="font-size:12px;color:var(--gray-400);"></div>
+      <div id="gpsMapWrap" style="display:none;margin-top:10px;border:1px solid var(--border,#ddd);border-radius:10px;overflow:hidden;">
+        <div id="gpsMap" style="width:100%;height:240px;"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="form-section-title">Informasi Tambahan</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div class="form-group">
+          <label class="form-label">Jenis Kendaraan</label>
+          <select class="form-select" id="jenisKendaraan">
+            <option value="">Pilih...</option>
+            <option value="Motor">Motor</option>
+            <option value="Pickup">Pickup</option>
+            <option value="Mobil Box">Mobil Box</option>
+          </select>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div class="form-group">
+          <label class="form-label">NIK</label>
+          <input class="form-input" id="nik" type="number" placeholder="16 digit">
+        </div>
+        <div class="form-group">
+          <label class="form-label">NPWP</label>
+          <input class="form-input" id="npwp" placeholder="XX.XXX.XXX.X-XXX.XXX">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Nama NPWP</label>
+        <input class="form-input" id="namaNpwp" placeholder="Sama dengan nama pemilik">
+      </div>
+    </div>
+
+    <button class="btn btn-success btn-lg btn-block" onclick="submitNOO()">💾 Simpan Toko Baru</button>
+    <div style="height:20px;"></div>
+  </div>
+
+  <nav class="bottom-nav">
+    <a href="dashboard.html" ><span class="nav-icon">🏠</span>Beranda</a>
+    <a href="absensi.html" ><span class="nav-icon">⏰</span>Absensi</a>
+    <a href="visit-card.html" ><span class="nav-icon">📋</span>Kunjungan</a>
+    <a href="noo.html" class="active"><span class="nav-icon">➕</span>NOO</a>
+    <a href="report.html" ><span class="nav-icon">📊</span>Laporan</a>
+  </nav>
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/api.js"></script>
+<script src="js/app.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+// ── Searchable cascading region dropdowns (wilayah) ──────────
+// Uses /api/wilayah?level=&parent=&q= backed by the locally-imported
+// BPS/Kemendagri dataset. Levels: prov → kab → kec → kel.
+const selProvinsi = { shown: false };
+let wilayahCache = {}; // 'prov' | 'kab:<parent>' | 'kec:<parent>' | 'kel:<parent>' -> [rows]
+
+// Fetch region list for a level, optionally by parent + search query.
+async function fetchWilayah(level, parent, q) {
+  const key = level + ':' + (parent || '');
+  const url = '/api/wilayah?level=' + encodeURIComponent(level) +
+    (parent ? '&parent=' + encodeURIComponent(parent) : '') +
+    (q ? '&q=' + encodeURIComponent(q) : '');
+  const r = await fetch(url, { credentials: 'same-origin', headers: { 'Accept': 'application/json' } });
+  if (!r.ok) throw new Error('Gagal memuat wilayah');
+  const d = await r.json();
+  return d.rows || [];
+}
+
+// Build the list DOM for a dropdown.
+function renderWilayahList(listId, rows, onPick, q) {
+  const el = document.getElementById(listId);
+  if (!rows.length) {
+    el.innerHTML = '<div class="w-none">' + (q ? 'Tidak ditemukan' : 'Tidak ada data') + '</div>';
+    return;
+  }
+  el.innerHTML = rows.map(row =>
+    '<div class="w-item" data-kode="' + row.kode + '" data-nama="' + row.nama.replace(/"/g, '&quot;') + '">' + row.nama + '</div>'
+  ).join('');
+  el.querySelectorAll('.w-item').forEach(item => {
+    item.addEventListener('click', () => {
+      onPick(item.getAttribute('data-kode'), item.getAttribute('data-nama'));
+    });
+  });
+}
+
+function closeAllDD() {
+  document.querySelectorAll('.wilayah-dd.open').forEach(dd => dd.classList.remove('open'));
+}
+
+// Open a dropdown for a level; loads its options (cascading parent).
+const WIL_ID = { prov: ['provinsi', 'provinsiKode', 'Provinsi'],
+                 kab: ['kota', 'kotaKode', 'Kota'],
+                 kec: ['kecamatan', 'kecamatanKode', 'Kecamatan'],
+                 kel: ['kelurahan', 'kelurahanKode', 'Kelurahan'] };
+async function openDD(el, ddId, level, q) {
+  closeAllDD();
+  const [inputId, kodeId, cap] = WIL_ID[level];
+  const dd = document.getElementById(ddId);
+  const input = document.getElementById(inputId);
+  dd.classList.add('open');
+  const listEl = dd.querySelector('.wilayah-list');
+  // Persistent search row (sibling of the list, never overwritten by list render).
+  const qInput = dd.querySelector('.wilayah-search-query');
+  if (qInput) { qInput.value = ''; qInput.focus(); }
+  listEl.innerHTML = '<div class="w-load">Memuat...</div>';
+  let parent = null;
+  if (level === 'kab') parent = document.getElementById('provinsiKode').value || null;
+  if (level === 'kec') parent = document.getElementById('kotaKode').value || null;
+  if (level === 'kel') parent = document.getElementById('kecamatanKode').value || null;
+  const onPick = (kode, nama) => {
+    input.value = nama;
+    document.getElementById(kodeId).value = kode;
+    dd.classList.remove('open');
+    resetDownstream(level);
+  };
+  let rows = [];
+  try {
+    rows = await fetchWilayah(level, parent, '');
+  } catch (e) {
+    listEl.innerHTML = '<div class="w-none">Gagal memuat: ' + e.message + '</div>';
+    return;
+  }
+  if (qInput) {
+    qInput.oninput = async () => {
+      const qq = qInput.value.trim();
+      let r2;
+      try { r2 = await fetchWilayah(level, parent, qq); }
+      catch (e) { r2 = []; }
+      renderWilayahList2(listEl, r2, onPick, qq);
+    };
+  }
+  renderWilayahList2(listEl, rows, onPick, '');
+}
+function renderWilayahList2(listEl, rows, onPick, q) {
+  if (!rows.length) {
+    listEl.innerHTML = '<div class="w-none">' + (q ? 'Tidak ditemukan' : 'Tidak ada data') + '</div>';
+    return;
+  }
+  listEl.innerHTML = rows.map(row =>
+    '<div class="w-item" data-kode="' + row.kode + '" data-nama="' + row.nama.replace(/"/g, '&quot;') + '">' + row.nama + '</div>'
+  ).join('');
+  listEl.querySelectorAll('.w-item').forEach(item => {
+    item.addEventListener('click', () => {
+      onPick(item.getAttribute('data-kode'), item.getAttribute('data-nama'));
+    });
+  });
+}
+
+// Clear the region fields downstream of the given level + their stored codes.
+function resetDownstream(level) {
+  if (level === 'prov') {
+    document.getElementById('kota').value = '';   document.getElementById('kotaKode').value = '';
+    document.getElementById('kecamatan').value = ''; document.getElementById('kecamatanKode').value = '';
+    document.getElementById('kelurahan').value = ''; document.getElementById('kelurahanKode').value = '';
+  } else if (level === 'kab') {
+    document.getElementById('kecamatan').value = ''; document.getElementById('kecamatanKode').value = '';
+    document.getElementById('kelurahan').value = ''; document.getElementById('kelurahanKode').value = '';
+  } else if (level === 'kec') {
+    document.getElementById('kelurahan').value = ''; document.getElementById('kelurahanKode').value = '';
+  }
+}
+
+// Optional: fill kode pos from the chosen kelurahan (dataset has it) — we don't
+// return pos in the list, so leave manual. Hook for future: keep as-is.
+function autoKodePos() {}
+
+// Close dropdowns on outside click
+document.addEventListener('click', function (e) {
+  if (!e.target.closest('.wilayah-dd')) closeAllDD();
+});
+
+// ── Channel → Kategori mapping
+const CHANNEL_KATEGORI = {
+  'GT': ['Retail Kecil', 'Retail Besar', 'Semi Grosir', 'Grosir', 'Agen', 'Kios'],
+  'MT': ['Minimarket', 'Convenience Store', 'Supermarket', 'Hypermarket', 'Department Store'],
+  'Horeka': ['Hotel', 'Restoran', 'Kafe', 'Katering', 'Tempat Hiburan'],
+  'Institutional': ['Kantor', 'Sekolah', 'Rumah Sakit', 'Pabrik', 'Instansi Pemerintah', 'Universitas']
+};
+
+function updateChannelKategori() {
+  const channel = document.getElementById('channel').value;
+  const kategoriEl = document.getElementById('kategori');
+  const options = CHANNEL_KATEGORI[channel] || [];
+  kategoriEl.innerHTML = '<option value="">Pilih kategori...</option>';
+  options.forEach(k => {
+    kategoriEl.innerHTML += `<option value="${k}">${k}</option>`;
+  });
+}
+
+let gpsMap = null;      // Leaflet map instance
+let gpsMarker = null;   // Leaflet marker (pin)
+let gpsMapInitialized = false;
+
+function showGpsMap(lat, lng) {
+  const wrap = document.getElementById('gpsMapWrap');
+  const el = document.getElementById('gpsMap');
+  if (!window.L) {
+    // Leaflet failed to load — fall back to the text status only.
+    document.getElementById('gpsStatus').textContent = 'Lokasi: ' + lat.toFixed(4) + ', ' + lng.toFixed(4) + ' (peta tidak tersedia)';
+    return;
+  }
+  if (!gpsMapInitialized) {
+    gpsMap = L.map(el, { scrollWheelZoom: false }).setView([lat, lng], 16);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap'
+    }).addTo(gpsMap);
+    gpsMarker = L.marker([lat, lng]).addTo(gpsMap);
+    gpsMarker.bindPopup('Lokasi GPS<br>' + lat.toFixed(6) + ', ' + lng.toFixed(6));
+    gpsMapInitialized = true;
+    // Reveal the map only after init (container must be visible to size correctly)
+    wrap.style.display = 'block';
+    gpsMap.invalidateSize();
+    gpsMarker.openPopup();
+  } else {
+    // Already initialized — move the pin + recenter (no flicker, no re-init)
+    gpsMarker.setLatLng([lat, lng]);
+    gpsMarker.setPopupContent('Lokasi GPS<br>' + lat.toFixed(6) + ', ' + lng.toFixed(6));
+    gpsMap.setView([lat, lng], 16);
+    wrap.style.display = 'block';
+    gpsMap.invalidateSize();
+    gpsMarker.openPopup();
+  }
+}
+
+function ambilGPS() {
+  const statusEl = document.getElementById('gpsStatus');
+  statusEl.textContent = 'Mendapatkan lokasi...';
+  if (!navigator.geolocation) {
+    statusEl.textContent = 'GPS tidak tersedia di browser ini';
+    return;
+  }
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      const lat = pos.coords.latitude;
+      const lng = pos.coords.longitude;
+      document.getElementById('lat').value = lat.toFixed(6);
+      document.getElementById('lng').value = lng.toFixed(6);
+      statusEl.textContent = 'Lokasi: ' + lat.toFixed(4) + ', ' + lng.toFixed(4);
+      showGpsMap(lat, lng);
+    },
+    (err) => {
+      statusEl.textContent = 'Gagal: ' + err.message;
+    },
+    { enableHighAccuracy: true, timeout: 10000 }
+  );
+}
+
+async function submitNOO() {
+  const namaToko = document.getElementById('namaToko').value.trim();
+  const namaPemilik = document.getElementById('namaPemilik').value.trim();
+  const noHp = document.getElementById('noHp').value.trim();
+  const kota = document.getElementById('kota').value.trim();
+  const alamat = document.getElementById('alamat').value.trim();
+  const lat = document.getElementById('lat').value;
+  const lng = document.getElementById('lng').value;
+
+  if (!namaToko || !namaPemilik || !noHp || !kota || !alamat) {
+    document.getElementById('errorAlert').textContent = 'Isi field wajib (Nama Toko, Pemilik, No HP, Kota, Alamat)';
+    document.getElementById('errorAlert').style.display = 'block';
+    return;
+  }
+
+  const btn = document.querySelector('button[onclick="submitNOO()"]');
+  btn.disabled = true;
+  btn.textContent = 'Menyimpan...';
+  document.getElementById('errorAlert').style.display = 'none';
+  document.getElementById('successAlert').style.display = 'none';
+
+  try {
+    // Create Place
+    const placeData = {
+      name: namaToko.toUpperCase(),
+      type: 'store',
+      street1: alamat,
+      city: kota,
+      province: document.getElementById('provinsi').value,
+      kecamatan: document.getElementById('kecamatan').value,
+      kelurahan: document.getElementById('kelurahan').value,
+      district: document.getElementById('kecamatan').value,
+      // Official BPS/Kemendagri codes (for cascading store filters later)
+      province_id: document.getElementById('provinsiKode').value,
+      city_id: document.getElementById('kotaKode').value,
+      kecamatan_id: document.getElementById('kecamatanKode').value,
+      kelurahan_id: document.getElementById('kelurahanKode').value,
+      country: 'ID',
+      phone: noHp,
+      postal_code: document.getElementById('kodePos').value,
+    };
+    if (lat && lng) {
+      placeData.location = { latitude: parseFloat(lat), longitude: parseFloat(lng) };
+    }
+
+    const place = await WIM_API.createPlace(placeData);
+
+    // Create Contact for store owner
+    const contact = await WIM_API.createContact({
+      place_uuid: place.uuid || place.data?.uuid,
+      name: namaPemilik,
+      type: 'customer',
+      phone: noHp,
+      meta: {
+        channel: document.getElementById('channel').value,
+        kategori: document.getElementById('kategori').value,
+        jenis_kendaraan: document.getElementById('jenisKendaraan').value,
+        nik: document.getElementById('nik').value,
+        npwp: document.getElementById('npwp').value,
+        nama_npwp: document.getElementById('namaNpwp').value,
+      }
+    });
+
+    document.getElementById('successAlert').textContent = `✅ Toko "${namaToko}" berhasil ditambahkan!`;
+    document.getElementById('successAlert').style.display = 'block';
+    btn.textContent = '💾 Simpan Toko Baru';
+    btn.disabled = false;
+
+    // Reset form
+    document.getElementById('namaToko').value = '';
+    document.getElementById('namaPemilik').value = '';
+    document.getElementById('noHp').value = '';
+    document.getElementById('alamat').value = '';
+    document.getElementById('lat').value = '';
+    document.getElementById('lng').value = '';
+
+  } catch(e) {
+    document.getElementById('errorAlert').textContent = `Gagal: ${e.message}`;
+    document.getElementById('errorAlert').style.display = 'block';
+    btn.textContent = '💾 Simpan Toko Baru';
+    btn.disabled = false;
+  }
+}
+
+// Session check
+document.addEventListener('DOMContentLoaded', async () => {
+  await Session.checkOrRedirect();
+  // Populate kategori for default channel (GT)
+  updateChannelKategori();
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>WIM Online — Dashboard</title>
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<div class="app-shell">
+  <header class="app-header">
+    <div class="header-row">
+      <span></span>
+      <h1>Dashboard</h1>
+      <button class="back-btn" onclick="handleLogout()" title="Keluar">⏻</button>
+    </div>
+    <div class="subtitle" id="userGreeting">WIM Online — Dashboard</div>
+  </header>
+
+  <div class="main-content">
+    <!-- Stats -->
+    <div class="stats-grid" id="statsGrid">
+      <div class="stat-card"><div class="stat-value" id="statPlan">—</div><div class="stat-label">Kunjungan Hari Ini</div></div>
+      <div class="stat-card"><div class="stat-value" id="statOrders">—</div><div class="stat-label">Pesanan Saya</div></div>
+      <div class="stat-card"><div class="stat-value" id="statVisits">—</div><div class="stat-label">Sudah Dikunjungi</div></div>
+      <div class="stat-card"><div class="stat-value" id="statAbsen">—</div><div class="stat-label">Absensi</div></div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="card">
+      <div class="card-title" style="margin-bottom:12px;">Aksi Cepat</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <button class="btn btn-primary btn-sm" onclick="location.href='absensi.html'">⏰ Absensi</button>
+        <button class="btn btn-success btn-sm" onclick="location.href='visit-card.html'">📋 Kunjungan</button>
+        <button class="btn btn-outline btn-sm" onclick="location.href='noo.html'">➕ NOO Baru</button>
+        <button class="btn btn-outline btn-sm" onclick="location.href='route-map.html'">🗺️ Rute</button>
+        <button class="btn btn-outline btn-sm" onclick="location.href='report.html'">📊 Laporan</button>
+      </div>
+    </div>
+
+    <!-- Today's Visit Plan -->
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Rencana Kunjungan Hari Ini</div>
+          <div class="card-subtitle" id="todayDate">Memuat...</div>
+        </div>
+        <span class="badge badge-info" id="planCount">0 toko</span>
+      </div>
+      <div id="storeList">
+        <div class="loading"><div class="spinner"></div></div>
+      </div>
+    </div>
+
+    <!-- Recent Activity -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Aktivitas Terakhir</div>
+      </div>
+      <div id="activityList">
+        <div class="empty-state"><p>Belum ada aktivitas hari ini</p></div>
+      </div>
+    </div>
+  </div>
+
+  <nav class="bottom-nav">
+    <a href="dashboard.html" class="active"><span class="nav-icon">🏠</span>Beranda</a>
+    <a href="absensi.html" ><span class="nav-icon">⏰</span>Absensi</a>
+    <a href="visit-card.html" ><span class="nav-icon">📋</span>Kunjungan</a>
+    <a href="noo.html" ><span class="nav-icon">➕</span>NOO</a>
+    <a href="report.html" ><span class="nav-icon">📊</span>Laporan</a>
+  </nav>
+</div>
+
+<!-- Store geofence popup -->
+<div class="modal-overlay" id="geoPopup" style="display:none;" onclick="if(event.target===this)closeGeoPopup()">
+  <div class="modal-content" style="max-width:340px;text-align:center">
+    <div class="modal-title" id="geoPopupTitle">📍 Detail Kunjungan</div>
+    <div class="modal-body" id="geoPopupBody"></div>
+    <div class="modal-actions" id="geoPopupActions" style="display:flex;flex-direction:column;gap:8px;margin-top:14px;"></div>
+    <button class="btn btn-outline btn-sm" style="margin-top:12px;width:100%;" onclick="closeGeoPopup()">✕ Tutup</button>
+  </div>
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/api.js"></script>
+<script src="js/app.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+  const user = await Session.checkOrRedirect();
+  if (!user) return;
+  document.getElementById('userGreeting').textContent = `Halo, ${user.name || 'User'}!`;
+  // Report the sales position each time the user lands on the dashboard (page change/refresh)
+  if (typeof WIM_Geo !== 'undefined') WIM_Geo.track();
+  await loadDashboard();
+});
+
+async function loadDashboard() {
+  try {
+    const [data, stores] = await Promise.all([
+      WIM_API.getDashboard(),
+      WIM_API.getMyStores(),
+    ]);
+    window.__dashStores = stores;
+
+    const plan = data.plan || { total: 0, route: 0, luar_rute: 0 };
+    document.getElementById('statPlan').textContent = plan.total;
+    document.getElementById('statOrders').textContent = data.orders || 0;
+    document.getElementById('statVisits').textContent = data.visitsToday || 0;
+
+    const absen = data.attendance || {};
+    document.getElementById('statAbsen').textContent = absen.clockIn ? (absen.clockOut ? '✅ Selesai' : '🕐 Aktif') : '—';
+
+    // Today's date
+    const now = new Date();
+    document.getElementById('todayDate').textContent = now.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    document.getElementById('planCount').textContent = `${plan.total} toko`;
+
+    // Store list
+    const storeList = document.getElementById('storeList');
+    if (stores.length === 0) {
+      storeList.innerHTML = `<div class="empty-state"><div class="empty-icon">📪</div><p>Belum ada kunjungan hari ini</p></div>`;
+    } else {
+      storeList.innerHTML = stores.map(s => {
+        const badge = s.source === 'luar_rute'
+          ? '<span class="badge badge-warning">📍 Luar Rute</span>'
+          : '<span class="badge badge-success">📍 Dalam Rute</span>';
+        return `<div class="store-item" onclick="openStoreGeoPopup('${s.uuid}')">
+          <div class="store-icon">${(s.name || 'T').charAt(0)}</div>
+          <div class="store-info">
+            <div class="store-name">${s.name}</div>
+            <div class="store-address">${s.city || ''}</div>
+            <div class="store-meta">${badge}</div>
+          </div>
+          <span style="color:var(--gray-300);font-size:18px;">›</span>
+        </div>`;
+      }).join('');
+    }
+
+    // Activity
+    const activityEl = document.getElementById('activityList');
+    const visits = data.recentVisits || [];
+    if (visits.length > 0) {
+      activityEl.innerHTML = visits.map(v => {
+        const time = v.checkinAt ? new Date(v.checkinAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '';
+        const badge = v.source === 'luar_rute' ? 'badge-warning' : 'badge-info';
+        return `<div class="store-item">
+          <div class="store-icon" style="background:var(--green);">📍</div>
+          <div class="store-info">
+            <div class="store-name">${v.placeName || 'Kunjungan'}</div>
+            <div class="store-address">${time} • <span class="badge ${badge}">${v.source === 'luar_rute' ? 'Luar Rute' : 'Dalam Rute'}</span></div>
+          </div>
+        </div>`;
+      }).join('');
+    }
+  } catch (e) {
+    console.error('Dashboard load error:', e);
+    document.getElementById('storeList').innerHTML = `<div class="alert alert-danger">Gagal memuat data: ${e.message}</div>`;
+  }
+}
+
+function closeGeoPopup(){ document.getElementById('geoPopup').style.display='none'; }
+
+let _geoStore = null;   // current store shown in the popup
+
+async function openStoreGeoPopup(uuid){
+  const store = (window.__dashStores||[]).find(s => String(s.uuid)===String(uuid));
+  if(!store){ showGeoUnauth(); return; }
+  _geoStore = store;
+  document.getElementById('geoPopup').style.display='flex';
+  document.getElementById('geoPopupTitle').textContent = '📍 ' + (store.name||'Toko');
+  // Try cached GPS first, else capture a fresh fix
+  let geo = (typeof WIM_Geo!=='undefined' && WIM_Geo.lastPosition) ? WIM_Geo.lastPosition : null;
+  if(!geo){ geo = await (typeof WIM_Geo!=='undefined' ? WIM_Geo.capture() : null); }
+  renderGeoPopup(geo, '', false);
+}
+
+async function refreshGeoLocation(){
+  const tgt = document.getElementById('geoRefreshBtn');
+  if(tgt){ tgt.disabled=true; tgt.textContent='📡 Mengambil lokasi...'; }
+  try {
+    const geo = (typeof WIM_Geo!=='undefined') ? await WIM_Geo.capture() : null;
+    renderGeoPopup(geo, 'Lokasi diperbarui. ' + (geo ? `(${geo.latitude.toFixed(6)}, ${geo.longitude.toFixed(6)})` : 'tidak ada fix GPS.'), true);
+  } finally {
+    if(tgt){ tgt.disabled=false; tgt.textContent='📡 Refresh Lokasi'; }
+  }
+}
+
+function renderGeoPopup(geo, note, refreshing){
+  const s = _geoStore; if(!s) return;
+  const radius = (s.geofenceRadiusM!==null && s.geofenceRadiusM!==undefined && s.geofenceRadiusM!=='') ? Number(s.geofenceRadiusM) : (typeof WIM_Geo!=='undefined' ? WIM_Geo.defaultRadiusM : 100);
+  let dist = null;
+  let inArea = false;
+  if(geo && geo.latitude!=null && geo.longitude!=null && s.latitude!=null && s.longitude!=null && typeof WIM_Geo!=='undefined'){
+    dist = WIM_Geo.distanceM(geo.latitude, geo.longitude, s.latitude, s.longitude);
+    inArea = (dist!==null) && dist <= radius;
+  }
+  const fmt = (n)=>{ if(n==null) return '—'; if(n<1000) return Math.round(n)+' m'; return (n/1000).toFixed(2)+' km'; };
+  const badge = (inArea)
+    ? '<span class="badge badge-success" style="font-size:14px;padding:6px 12px;">✅ Dalam Area</span>'
+    : (dist===null)
+      ? '<span class="badge" style="font-size:14px;padding:6px 12px;background:#eceef5;color:#6c6c80;">📡 Cek Lokasi</span>'
+      : '<span class="badge badge-danger" style="font-size:14px;padding:6px 12px;">⛔ Luar Area</span>';
+  const body = document.getElementById('geoPopupBody');
+  body.innerHTML = `
+    <div style="margin-bottom:6px;color:var(--gray-600);font-size:14px;">${escHtml(s.name||'Toko')}</div>
+    <div style="font-size:13px;color:var(--gray-400);margin-bottom:10px;">${escHtml(s.address||s.city||'')}</div>
+    <div style="margin-bottom:6px;">${badge}</div>
+    <div style="font-size:13px;color:var(--gray-500);margin:4px 0;">Jarak Anda: ${fmt(dist)} &nbsp;·&nbsp; Radius: ${radius} m</div>
+    ${note?('<div style="font-size:12px;color:var(--green);margin:6px 0;">'+escHtml(note)+'</div>'):''}
+  `;
+  const actions = document.getElementById('geoPopupActions');
+  if(inArea){
+    actions.innerHTML = `<button class="btn btn-primary btn-block" onclick="location.href='visit-card.html?store=${encodeURIComponent(s.uuid)}'">📍 Lanjut Kunjungan</button>
+      <button class="btn btn-outline btn-block" onclick="openMapsLink()">🗺️ Buka Google Maps</button>
+      <button class="btn btn-outline btn-block" id="geoRefreshBtn" onclick="refreshGeoLocation()">📡 Refresh Lokasi</button>`;
+  }else{
+    actions.innerHTML = `<button class="btn btn-danger btn-block" onclick="openMapsLink()">🗺️ Buka Google Maps</button>
+      <button class="btn btn-outline btn-block" id="geoRefreshBtn" onclick="refreshGeoLocation()">📡 Refresh Lokasi</button>`;
+    if(!refreshing && dist!==null){
+      actions.innerHTML += `<div style="font-size:12px;color:var(--danger,var(--gray-500));margin-top:4px;">Anda berada di luar area toko. Periksa lokasi Anda atau tekan Refresh Lokasi jika Anda sudah berada di toko.</div>`;
+    }
+  }
+  document.getElementById('geoPopupTitle').textContent = '📍 ' + (s.name||'Toko');
+}
+
+function openMapsLink(){
+  const s = _geoStore; if(!s) return;
+  if(s.latitude!=null && s.longitude!=null){
+    window.open('https://www.google.com/maps?q='+s.latitude+','+s.longitude, '_blank');
+  }else{
+    alert('Toko ini belum memiliki koordinat GPS.');
+  }
+}
+
+function showGeoUnauth(){
+  document.getElementById('geoPopup').style.display='flex';
+  document.getElementById('geoPopupTitle').textContent = '📍 Toko';
+  document.getElementById('geoPopupBody').innerHTML = '<div style="color:var(--gray-500)">Data toko tidak ditemukan.</div>';
+  document.getElementById('geoPopupActions').innerHTML = '<button class="btn btn-outline btn-block" onclick="closeGeoPopup()">✕ Batal</button>';
+}
+function escHtml(str){ return String(str||'').replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+
+function handleLogout() {
+  if (confirm('Keluar dari aplikasi?')) {
+    Session.clear();
+    window.location.href = 'index.html';
+  }
+}
+</script>
+</body>
+</html>

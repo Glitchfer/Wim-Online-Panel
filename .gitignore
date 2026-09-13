@@ -1,0 +1,35 @@
+# repo metadata — WIM Online SFA
+
+# Secrets — never commit
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Deploy artifacts / build copies (populated locally)
+deploy/sales-app/www/
+deploy/api/serve.py
+deploy/admin/admin-server.py
+deploy/db/init/02-seed.sql
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+
+# Logs & runtime
+*.log
+/tmp/
+# Agent backup artifacts
+*.saved

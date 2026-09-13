@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WIM Admin — Depo Management</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f0f2f5;color:#1a1a2e;font-size:14px}
+.topnav{background:#1a1a2e;color:#fff;padding:0 24px;display:flex;align-items:center;height:56px;position:sticky;top:0;z-index:100}
+.topnav .brand{font-weight:700;font-size:16px;margin-right:32px}
+.topnav .brand span{color:#8e8ea0;font-weight:400}
+.topnav nav{display:flex;gap:4px;flex:1}
+.topnav nav a{color:#b0b0c8;text-decoration:none;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:500;transition:all .15s}
+.topnav nav a:hover{color:#fff;background:rgba(255,255,255,.08)}
+.topnav nav a.active{color:#fff;background:#4361ee}
+.user-info{font-size:12px;color:#8e8ea0;display:flex;align-items:center;gap:8px}
+.user-info .role-badge{background:#4361ee;padding:2px 8px;border-radius:6px;font-size:11px;color:#fff}
+.logout{color:#e63946;cursor:pointer;font-size:12px;margin-left:12px;text-decoration:none}
+.container{max-width:1280px;margin:0 auto;padding:24px}
+.page-title{font-size:20px;font-weight:700;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px}
+.page-title .sub{font-size:13px;color:#8e8ea0;font-weight:400}
+.card{background:#fff;border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,.04);overflow:hidden;margin-bottom:20px}
+.card-header{padding:16px 20px;border-bottom:1px solid #f0f2f5;display:flex;justify-content:space-between;align-items:center}
+.card-header h3{font-size:15px;font-weight:600}
+.card-body{padding:0;overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{padding:10px 14px;text-align:left;font-weight:600;color:#6c6c80;font-size:11px;text-transform:uppercase;letter-spacing:.5px;background:#fafbfc;border-bottom:1px solid #eef0f4}
+td{padding:10px 14px;border-bottom:1px solid #f0f2f5}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#f8f9fc}
+.status-badge{display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600}
+.status-ok{background:#d4f5e2;color:#0a7c42}
+.status-info{background:#e8f0fe;color:#4361ee}
+.loading{text-align:center;padding:40px;color:#8e8ea0}
+.error-bar{background:#fde8e8;color:#c0392b;padding:12px 20px;border-radius:8px;margin-bottom:16px;font-size:13px;display:none}
+.toast{position:fixed;top:20px;right:20px;padding:12px 20px;border-radius:8px;font-size:13px;font-weight:500;z-index:999;display:none;box-shadow:0 4px 12px rgba(0,0,0,.12)}
+.toast-success{background:#d4f5e2;color:#0a7c42}
+.toast-error{background:#fde8e8;color:#c0392b}
+.btn{padding:8px 14px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none}
+.btn-primary{background:#4361ee;color:#fff}
+.btn-success{background:#0a7c42;color:#fff}
+.btn-outline{background:#fff;color:#4361ee;border:1px solid #d0d5dd}
+.btn-sm{padding:5px 10px;font-size:12px}
+.inline-form{display:none;padding:18px 20px;background:#f8f9fc;border-bottom:1px solid #f0f2f5}
+.inline-form.open{display:block}
+.form-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:12px}
+.form-field{display:flex;flex-direction:column;gap:4px}
+.form-field label{font-size:11px;font-weight:600;color:#6c6c80;text-transform:uppercase;letter-spacing:.3px}
+.form-field input,.form-field select{padding:7px 10px;border:1px solid #d0d5dd;border-radius:6px;font-size:13px;color:#1a1a2e;background:#fff}
+.form-field input:focus,.form-field select:focus{outline:none;border-color:#4361ee}
+.form-actions{display:flex;gap:8px;justify-content:flex-end}
+.hint{font-size:12px;color:#8e8ea0;margin-top:6px}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;z-index:900}
+.modal-box{background:#fff;border-radius:14px;min-width:min(520px,92vw);max-height:80vh;display:flex;flex-direction:column;box-shadow:0 10px 40px rgba(0,0,0,.2)}
+.modal-header{display:flex;justify-content:space-between;align-items:center;padding:16px 20px;border-bottom:1px solid #eef0f4}
+.modal-header h3{font-size:16px;font-weight:700}
+.modal-body{padding:16px 20px;overflow-y:auto}
+.modal-body .urow{padding:10px 4px;border-bottom:1px solid #f0f2f5;display:flex;justify-content:space-between;align-items:center;gap:10px}
+.modal-body .urow .role{font-size:11px;color:#6c6c80}
+</style>
+</head>
+<body data-page="depots">
+<div id="appHeader"></div>
+<div class="container">
+  <div class="error-bar" id="errorBar"></div>
+  <div class="toast" id="toast"></div>
+
+  <div class="page-title">
+    <span>Manajemen Depo</span>
+    <div>
+      <span class="sub" id="depotCount" style="margin-right:12px"></span>
+      <button class="btn btn-success" onclick="toggleAdd()" id="addBtn">＋ Tambah Depo</button>
+    </div>
+  </div>
+
+  <!-- Add / Edit form -->
+  <div class="inline-form" id="depotForm">
+    <div class="form-row">
+      <div class="form-field"><label>Nama Depo *</label><input type="text" id="fName"></div>
+      <div class="form-field"><label>Kode Depo</label><input type="text" id="fKode"></div>
+      <div class="form-field"><label>Alamat</label><input type="text" id="fAddress"></div>
+      <div class="form-field">
+        <label>Region / Area</label>
+        <select id="fRegion"><option value="">— Pilih Region —</option></select>
+      </div>
+      <div class="form-field"><label>Latitude</label><input type="number" id="fLat" step="0.0000001"></div>
+      <div class="form-field"><label>Longitude</label><input type="number" id="fLng" step="0.0000001"></div>
+      <div class="form-field"><label>Radius Checkin (M)*</label><input type="number" id="fRadius" value="50" min="1"></div>
+    </div>
+    <div class="hint">Radius dipakai untuk geofence check-in di depo (digunakan absensi sales).</div>
+    <div class="form-actions">
+      <span id="editUuid" style="display:none"></span>
+      <button class="btn btn-outline" onclick="toggleAdd()">Batal</button>
+      <button class="btn btn-success" onclick="saveDepot()">💾 Simpan Depo</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><h3>🏢 Daftar Depo</h3></div>
+    <div class="card-body">
+      <div class="loading" id="depotsLoading">Memuat...</div>
+      <table id="depotsTable" style="display:none">
+        <thead><tr><th>Nama Depo</th><th>Alamat</th><th>Region</th><th>Latitude</th><th>Longitude</th><th>Radius (M)</th><th>Koordinasi</th></tr></thead>
+        <tbody id="depotsBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Depo member popup -->
+<div class="modal" id="depoModal" style="display:none" onclick="if(event.target===this)closeDepoModal()">
+  <div class="modal-box">
+    <div class="modal-header"><h3 id="depoModalTitle">Anggota Depo</h3><button class="btn btn-outline btn-sm" onclick="closeDepoModal()">✕</button></div>
+    <div class="modal-body" id="depoModalBody"></div>
+  </div>
+</div>
+
+<script>
+const ADMIN_KEY = 'wim_admin_token';
+try{const u=JSON.parse(sessionStorage.getItem('admin_user')||'{}');if(document.getElementById('userName'))document.getElementById('userName').textContent=u.name||'-';if(document.getElementById('userRole'))document.getElementById('userRole').textContent=u.role||'-'}catch(e){}
+let REGIONS=[];
+async function api(path, options) {
+  const r = await fetch(path, { credentials:'same-origin', headers:{'Accept':'application/json','Content-Type':'application/json'}, ...options });
+  if (r.status === 401) { logout(); throw new Error('Session expired'); }
+  const d = await r.json();
+  if (!r.ok) throw new Error(d.error || 'API error');
+  return d;
+}
+function logout() { localStorage.removeItem(ADMIN_KEY); sessionStorage.removeItem('admin_user'); fetch('/api/admin/logout', {method:'POST',credentials:'same-origin'}).catch(()=>{}); location.href='index.html'; }
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(m){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]})}
+function showToast(msg,type){const t=document.getElementById('toast');t.textContent=msg;t.className='toast toast-'+type;t.style.display='block';setTimeout(()=>t.style.display='none',3500)}
+
+let editUuid='';
+let allDepots=[];
+function toggleAdd(){
+  const f=document.getElementById('depotForm'),b=document.getElementById('addBtn');
+  f.classList.toggle('open');
+  b.textContent=f.classList.contains('open')?'✕ Tutup':'＋ Tambah Depo';
+  if(!f.classList.contains('open')){editUuid='';document.getElementById('editUuid').textContent='';}
+}
+function openEdit(id){
+  const dp=allDepots.find(x=>String(x.id)===String(id));if(!dp)return;
+  editUuid=dp.id;document.getElementById('editUuid').textContent=dp.id;
+  document.getElementById('fName').value=dp.name||'';
+  document.getElementById('fKode').value=dp.kodeDepo||'';
+  document.getElementById('fAddress').value=dp.address||'';
+  document.getElementById('fRegion').value=dp.regionId!=null?String(dp.regionId):'';
+  document.getElementById('fLat').value=dp.lat!=null?dp.lat:'';
+  document.getElementById('fLng').value=dp.lng!=null?dp.lng:'';
+  document.getElementById('fRadius').value=dp.radiusM||50;
+  if(!document.getElementById('depotForm').classList.contains('open'))document.getElementById('depotForm').classList.add('open');
+  document.getElementById('addBtn').textContent='✕  Tutup';
+  window.scrollTo({top:document.getElementById('depotForm').offsetTop-80,behavior:'smooth'});
+}
+function regionName(id){const r=REGIONS.find(x=>String(x.id)===String(id));return r?r.name:''}
+
+async function loadRegions(){
+  try{const d=await api('/api/admin/filter-options');REGIONS=d.regions||[];
+    document.getElementById('fRegion').innerHTML='<option value="">— Pilih Region —</option>'+REGIONS.map(r=>`<option value="${r.id}">${esc(r.name)}</option>`).join('');
+  }catch(e){}
+}
+
+async function loadDepots(){
+  document.getElementById('depotsLoading').style.display='block';
+  document.getElementById('depotsTable').style.display='none';
+  document.getElementById('errorBar').style.display='none';
+  try{
+    const d=await api('/api/admin/depots');
+    const depots=d.depots||[];
+    allDepots=depots;
+    const tb=document.getElementById('depotsBody');
+    document.getElementById('depotCount').textContent=depots.length+' depo';
+    if(!depots.length){tb.innerHTML='<tr><td colspan="7" style="text-align:center;padding:30px;color:#8e8ea0;font-size:14px">Tidak ada depo ditemukan</td></tr>';}
+    else{
+      tb.innerHTML=depots.map(dp=>`<tr style="cursor:pointer" onclick="showDepotUsers(${dp.id})" title="Klik untuk lihat anggota depo">
+        <td><b>${esc(dp.name||'-')}</b><br><span style="font-size:11px;color:#8e8ea0">ID: ${esc(dp.id||'-')} · klik utk anggota</span></td>
+        <td style="color:#6c6c80;font-size:12px">${esc(dp.address||'-')}</td>
+        <td>${dp.regionId?'<span class="status-badge status-info">'+esc(regionName(dp.regionId))+'</span>':'-'}</td>
+        <td style="color:#6c6c80;font-size:12px">${dp.lat!=null?dp.lat:'-'}</td>
+        <td style="color:#6c6c80;font-size:12px">${dp.lng!=null?dp.lng:'-'}</td>
+        <td>${dp.radiusM?'<span class="status-badge status-info">'+esc(dp.radiusM)+' m</span>':'-'}</td>
+        <td><button class="btn btn-outline btn-sm" onclick="event.stopPropagation();openEdit(${dp.id})">✏️ Edit</button>&nbsp;<button class="btn btn-primary btn-sm" onclick="event.stopPropagation();showDepotUsers(${dp.id})">👥 Anggota</button></td>
+      </tr>`).join('');
+    }
+    document.getElementById('depotsLoading').style.display='none';
+    document.getElementById('depotsTable').style.display='';
+  }catch(e){
+    document.getElementById('depotsLoading').textContent='Gagal  memuat data: '+e.message;
+    document.getElementById('errorBar').textContent='Gagal memuat depo: '+e.message;
+    document.getElementById('errorBar').style.display='block';
+  }
+}
+async function saveDepot(){
+  const name=document.getElementById('fName').value.trim();
+  if(!name){showToast('Nama depo diperlukan','error');return;}
+  const lat=document.getElementById('fLat').value;
+  const lng=document.getElementById('fLng').value;
+  const radius=document.getElementById('fRadius').value;
+  const body={
+    name,
+    kode_depo:document.getElementById('fKode').value.trim(),
+    address:document.getElementById('fAddress').value.trim(),
+    latitude:lat!==''?parseFloat(lat):null,
+    longitude:lng!==''?parseFloat(lng):null,
+    radius_m:radius!==''&&radius?parseInt(radius,10):50,
+    region_id:document.getElementById('fRegion').value?parseInt(document.getElementById('fRegion').value,10):null,
+  };
+  try{
+    if(editUuid){
+      await api('/api/admin/depots/'+editUuid,{method:'PATCH',body:JSON.stringify(body)});
+      showToast('✅ Depo diperbarui','success');
+    }else{
+      await api('/api/admin/depots',{method:'POST',body:JSON.stringify(body)});
+      showToast('✅ Depo ditambahkan','success');
+    }
+    toggleAdd();await loadDepots();
+  }catch(e){showToast('❌ '+e.message,'error')}
+}
+
+loadRegions();
+loadDepots();
+
+// Depo member popup (#12)
+function closeDepoModal(){document.getElementById('depoModal').style.display='none';document.getElementById('depoModalBody').innerHTML=''}
+async function showDepotUsers(depoId){
+  const dp=allDepots.find(x=>String(x.id)===String(depoId));
+  document.getElementById('depoModalTitle').textContent='👥 Anggota — '+(dp?esc(dp.name):'Depo '+depoId);
+  const box=document.getElementById('depoModalBody');
+  box.innerHTML='<div class="loading">Memuat...</div>';
+  document.getElementById('depoModal').style.display='flex';
+  try{
+    const d=await api('/api/admin/users');
+    const users=(d.users||[]).filter(u=>String(u.depot_id||'')===String(depoId));
+    if(!users.length){box.innerHTML='<div style="text-align:center;padding:24px;color:#8e8ea0">Belum ada user di depo ini</div>';return;}
+    box.innerHTML=users.map(u=>'<div class="urow"><div><b>'+esc(u.name)+'</b><br><span style="font-size:11px;color:#6c6c80">'+esc(u.email||'')+'</span></div><span class="role"><span class="status-badge status-info">'+esc(u.role||'')+'</span></span></div>').join('');
+  }catch(e){
+    box.innerHTML='<div style="text-align:center;padding:24px;color:#c0392b">Gagal memuat: '+esc(e.message)+'</div>';
+  }
+}
+// nav dropdown hover
+document.querySelectorAll('.rencana-drop').forEach(function(dd){var menu=dd.querySelector('span[style*="position:absolute"]');if(!menu)return;dd.addEventListener('mouseenter',function(){menu.style.display='block'});dd.addEventListener('mouseleave',function(){menu.style.display='none'});});
+</script>
+<div id="appFooter"></div>
+<script src="js/include.js"></script>
+</body>
+</html>

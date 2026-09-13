@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WIM Admin — Harga per Depo</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f0f2f5;color:#1a1a2e;font-size:14px}
+.container{max-width:1280px;margin:0 auto;padding:24px}
+.page-title{font-size:20px;font-weight:700;margin-bottom:20px}
+.page-title .sub{font-size:13px;color:#8e8ea0;font-weight:400}
+.card{background:#fff;border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,.04);overflow:hidden}
+.card-header{padding:16px 20px;border-bottom:1px solid #f0f2f5;display:flex;justify-content:space-between;align-items:center}
+.card-header h3{font-size:15px;font-weight:600}
+.card-body{padding:16px 20px}
+.error-bar{background:#fde8e8;color:#c0392b;padding:12px 20px;border-radius:8px;margin-bottom:16px;font-size:13px;display:none}
+.toast{position:fixed;top:16px;right:20px;z-index:1000;color:#fff;padding:12px 18px;border-radius:10px;font-size:13px;box-shadow:0 4px 16px rgba(0,0,0,.18);display:none}
+.toast-success{background:#0a7c42;color:#fff}
+.toast-error{background:#c0392b;color:#fff}
+.field{display:flex;flex-direction:column;gap:4px;margin-right:12px}
+.field label{font-size:12px;color:#6c6c80;white-space:nowrap}
+.field select,.field input{height:38px;padding:0 10px;border:1px solid #d0d5dd;border-radius:8px;font-size:13px;background:#fff;color:#1a1a2e}
+.tools{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-top:6px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{background:#f5f7fa;color:#6c6c80;text-align:left;padding:9px 12px;font-weight:600;border-bottom:1px solid #e6e9f0;white-space:nowrap}
+td{padding:9px 12px;border-bottom:1px solid #eef1f6;vertical-align:middle}
+tr:hover td{background:#f8f9fc}
+input.price-input{width:130px;padding:7px 10px;border:1px solid #d0d5dd;border-radius:8px;font-size:13px;text-align:right}
+input.price-input.dirty{border-color:#4361ee;background:#eaf1ff;font-weight:600}
+.price-cell{font-weight:600;color:#1a1a2e;white-space:nowrap}
+.sku-cell{font-family:monospace;font-size:12px;color:#6c6c80}
+.badge{display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600}
+.badge-depot{background:#e8f0fe;color:#4361ee}
+.badge-base{background:#eceef5;color:#6c6c80}
+.badge-remove{background:#fdecec;color:#c0392b}
+.btn-mini{border:1px solid #d0d5dd;background:#fff;color:#c0392b;padding:3px 8px;border-radius:8px;font-size:11px;cursor:pointer;font-weight:600;margin-left:6px}
+.btn-mini:hover{border-color:#c0392b;color:#c0392b}
+.btn{border:1px solid #d0d5dd;background:#fff;color:#1a1a2e;padding:9px 16px;border-radius:10px;font-size:13px;cursor:pointer;font-weight:600}
+.btn:hover{border-color:#4361ee;color:#4361ee}
+.btn-primary{background:#4361ee;color:#fff;border:none}
+.btn-success{background:#0a7c42;color:#fff;border:none}
+.btn-outline{background:#fff;color:#6c6c80;border:1px solid #d0d5dd}
+.modal{position:fixed;inset:0;background:rgba(15,20,35,.55);display:none;align-items:center;justify-content:center;z-index:900}
+.modal-inner{background:#fff;border-radius:14px;box-shadow:0 10px 40px rgba(0,0,0,.2);max-width:860px;width:92%;max-height:80vh;display:flex;flex-direction:column}
+.modal-head{padding:16px 20px;border-bottom:1px solid #f0f2f5;font-size:15px;font-weight:700;display:flex;justify-content:space-between;align-items:center}
+.modal-body{padding:16px 20px;overflow:auto}
+.modal-foot{padding:14px 20px;border-top:1px solid #f0f2f5;display:flex;justify-content:flex-end;gap:10px}
+.preview-table td.price-before{color:#c0392b}
+.preview-table td.price-after{color:#0a7c42;font-weight:700}
+.loading{text-align:center;padding:40px;color:#8e8ea0}
+.empty{text-align:center;padding:30px;color:#8e8ea0}
+.hint{font-size:12px;color:#8e8ea0;max-width:680px;margin:2px 0 14px;line-height:1.5}
+</style>
+</head>
+<body data-page="pricing">
+<div id="appHeader"></div>
+<div class="container">
+  <div class="error-bar" id="errorBar"></div>
+  <div class="toast" id="toast"></div>
+
+  <div class="page-title">
+    💰 Harga per Depo <span class="sub" id="productCount"></span>
+  </div>
+  <div class="hint">Harga produk berlaku <b>per depo</b> (bukan per area/kecamatan/kabupaten). Pilih depo, isi harga baru
+    per produk, lalu <b>Preview</b> dan <b>Confirm &amp; Simpan</b>. Produk tanpa harga baru tidak berubah.</div>
+
+  <div class="card">
+    <div class="card-header"><h3>⚙️ Pilih Depo</h3></div>
+    <div class="card-body">
+      <div class="tools">
+        <div class="field" style="min-width:300px">
+          <label>🏢 Depo berlaku</label>
+          <select id="depotSel" onchange="onDepotChange()"><option value="">— Pilih Depo —</option></select>
+        </div>
+        <div class="field">
+          <label>📅 Tanggal set (efektif dari)</label>
+          <input type="date" id="effDate">
+        </div>
+      </div>
+      <div id="depotInfo" class="hint" style="margin-top:10px"></div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <div class="card-header">
+      <h3>🏷️ Produk</h3>
+      <div style="display:flex;gap:10px;align-items:center">
+        <input type="text" id="searchQ" placeholder="🔍 Cari SKU/nama" style="height:34px;padding:0 12px;border:1px solid #d0d5dd;border-radius:8px;font-size:13px" oninput="renderGrid()">
+        <button class="btn-outline" onclick="resetPrices()">↺ Reset</button>
+        <button class="btn-primary" onclick="openPreview()">👁️ Preview Perubahan</button>
+      </div>
+    </div>
+    <div class="card-body">
+      <div id="priceLoading" class="loading">Memuat harga...</div>
+      <div id="priceTableWrap" style="overflow-x:auto"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Preview modal -->
+<div class="modal" id="previewModal">
+  <div class="modal-inner">
+    <div class="modal-head"><span>👁️ Preview Perubahan Harga</span><span style="cursor:pointer" onclick="closeModal()">✕</span></div>
+    <div class="modal-body">
+      <div id="previewBody"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-outline" onclick="closeModal()">Batal</button>
+      <button class="btn-success" onclick="confirmSave()">✅ Confirm &amp; Simpan</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const ADMIN_KEY = 'wim_admin_token';
+try { const u = JSON.parse(sessionStorage.getItem('admin_user')||'{}'); if(document.getElementById('userName'))document.getElementById('userName').textContent= u.name||'-'; if(document.getElementById('userRole'))document.getElementById('userRole').textContent= u.role||'-'; } catch(e){}
+document.getElementById('effDate').value = new Date().toISOString().slice(0,10);
+
+async function api(path, opts){
+  const r = await fetch(path, { credentials:'same-origin', headers:{'Accept':'application/json','Content-Type':'application/json'}, ...opts });
+  if (r.status === 401) { logout(); throw new Error('Sesi habis — silakan login ulang'); }
+  const d = await r.json();
+  if (!r.ok) throw new Error(d.error || 'Gagal memperoces permintaan');
+  return d;
+}
+function logout(){ localStorage.removeItem(ADMIN_KEY); sessionStorage.removeItem('admin_user'); fetch('/api/admin/logout',{method:'POST',credentials:'same-origin'}).catch(()=>{}); location.href='index.html'; }
+function showToast(msg, type){ const t=document.getElementById('toast'); t.textContent=msg; t.className='toast toast-'+type; t.style.display='block'; setTimeout(()=>{t.style.display='none';},4000); }
+function esc(s){ return String(s||'').replace(/[&<>"']/g, function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];}); }
+function formatRp(n){ try{ return 'Rp ' + Number(n||0).toLocaleString('id-ID'); }catch(e){ return 'Rp '+(n||0); } }
+
+let depots = [];
+let products = [];       // {uuid, sku, name, basePrice, depotPrices:{did:{price,effectiveFrom}}}
+let dirty = {};          // sku -> new price
+let toRemove = {};       // sku -> true (remove this depot's override -> back to base)
+let saving = false;      // double-submit guard
+
+function selectedDepotId(){ return Number(document.getElementById('depotSel').value) || null; }
+function selectedDepot(){ const did=selectedDepotId(); return depots.find(d=>d.id===did) || null; }
+
+async function loadPrices(){
+  try {
+    const d = await api('/api/admin/products/prices');
+    depots = d.depots || [];
+    products = d.products || [];
+    const sel = document.getElementById('depotSel');
+    const prev = sel.value;
+    sel.innerHTML = '<option value="">— Pilih Depo —</option>' + depots.map(dp=>`<option value="${dp.id}">${esc(dp.name)}</option>`).join('');
+    if(prev) sel.value = prev;
+    renderGrid();
+    onDepotChange();
+    document.getElementById('productCount').textContent = products.length + ' produk';
+    document.getElementById('priceLoading').style.display = 'none';
+  } catch(e){ showToast('Gagal memuat harga: '+e.message,'error'); }
+}
+
+function onDepotChange(){
+  const dp = selectedDepot();
+  const info = document.getElementById('depotInfo');
+  info.textContent = dp ? `✅ Menampilkan harga untuk depo: ${dp.name}` : 'Pilih depo untuk mengatur harga produk depo tersebut.';
+  renderGrid();
+}
+
+function currentDepotPrice(p){
+  const did = selectedDepotId();
+  if(!did) return null;
+  if(p.depotPrices && p.depotPrices[did]) return p.depotPrices[did].price;
+  return null;
+}
+
+function renderGrid(){
+  const wrap = document.getElementById('priceTableWrap');
+  const q = (document.getElementById('searchQ').value||'').toLowerCase();
+  const list = products.filter(p => !q || p.sku.toLowerCase().includes(q) || p.name.toLowerCase().includes(q));
+  if(!list.length){ wrap.innerHTML = '<div class="empty">Belum ada produk</div>'; return; }
+  const dp = selectedDepot();
+  const colLabel = dp ? dp.name : '(pilih depo dulu)';
+  const head = `<table>
+    <thead><tr>
+      <th>SKU</th><th>Nama</th><th>Harga Base</th><th>Harga Depo (${esc(colLabel)})</th>
+      <th>Harga Baru</th>
+    </tr></thead><tbody>` +
+    list.map(p => {
+      const cur = currentDepotPrice(p);
+      const hasOverride = cur !== null;
+      const isRemoving = !!toRemove[p.sku];
+      const curVal = isRemoving ? '' : (dirty[p.sku] !== undefined ? dirty[p.sku] : (hasOverride ? cur : p.basePrice));
+      const dirtyCls = (dirty[p.sku] !== undefined || isRemoving) ? 'dirty' : '';
+      return `<tr>
+        <td><span class="sku-cell">${esc(p.sku)}</span></td>
+        <td><b>${esc(p.name)}</b></td>
+        <td class="price-cell">${formatRp(p.basePrice)}</td>
+        <td class="price-cell">${hasOverride ? formatRp(cur) + (isRemoving ? ' <span class="badge badge-remove">🗑 Naar Base</span>' : '') : '<span class="badge badge-base">Base</span>'}</td>
+        <td><input type="number" class="price-input ${dirtyCls}" value="${curVal}" min="0" step="1" ${isRemoving ? 'disabled' : ''} oninput="setDirty('${esc(p.sku)}', this.value)" />
+          ${hasOverride ? `<button class="btn-mini" onclick="toggleRemove('${esc(p.sku)}')" title="Verwijder depo harga — terug naar base">${isRemoving ? '↩ Behouden' : '🗑 Naar Base'}</button>` : ''}
+        </td>
+      </tr>`;
+    }).join('') + `</tbody></table>`;
+  wrap.innerHTML = head;
+}
+
+function setDirty(sku, val){
+  const num = Number(val);
+  if(val === '' || num < 0 || isNaN(num)){ delete dirty[sku]; }
+  else { dirty[sku] = num; delete toRemove[sku]; }  // editing cancels a pending removal
+  renderGrid();
+}
+function toggleRemove(sku){
+  if(toRemove[sku]){ delete toRemove[sku]; }
+  else { toRemove[sku] = true; delete dirty[sku]; }
+  renderGrid();
+}
+function resetPrices(){
+  if(!confirm('Reset semua harga baru ke harga lama?')) return;
+  dirty = {};
+  toRemove = {};
+  renderGrid();
+}
+
+function buildPreview(){
+  const did = selectedDepotId();
+  if(!did){ showToast('Pilih depo terlebih dahulu','error'); return null; }
+  const eff = document.getElementById('effDate').value;
+  const rows = [];
+  for(const sku of Object.keys(toRemove)){
+    const p = products.find(x=>x.sku===sku); if(!p) continue;
+    rows.push({ sku:p.sku, name:p.name, depotId:did,
+      priceBefore:(p.depotPrices && p.depotPrices[did]) ? p.depotPrices[did].price : p.basePrice,
+      setDateBefore:(p.depotPrices && p.depotPrices[did] && p.depotPrices[did].effectiveFrom) ? p.depotPrices[did].effectiveFrom : '—',
+      priceAfter:null, effectiveFrom:eff, removing:true });
+  }
+  for(const sku of Object.keys(dirty)){
+    const p = products.find(x=>x.sku===sku); if(!p) continue;
+    const newPrice = dirty[sku];
+    if(newPrice === null) continue;
+    const before = (p.depotPrices && p.depotPrices[did]) ? p.depotPrices[did].price : p.basePrice;
+    const setBefore = (p.depotPrices && p.depotPrices[did] && p.depotPrices[did].effectiveFrom) ? p.depotPrices[did].effectiveFrom : '—';
+    if(Math.abs(Number(before) - Number(newPrice)) < 0.01) continue;
+    rows.push({ sku:p.sku, name:p.name, depotId:did,
+      priceBefore:before, setDateBefore:setBefore, priceAfter:newPrice, effectiveFrom:eff });
+  }
+  return rows;
+}
+
+function openPreview(){
+  const rows = buildPreview();
+  if(!rows){ return; }
+  if(!rows.length){ showToast('Belum ada perubahan harga (harga tidak berubah)','error'); return; }
+  const dp = selectedDepot();
+  document.getElementById('previewBody').innerHTML = `
+    <div class="hint" style="margin-top:0">Depo: <b>${esc(dp?dp.name:'')}</b> · Efektif dari <b>${esc(rows[0].effectiveFrom)}</b> · ${rows.length} perubahan</div>
+    <table class="preview-table">
+      <thead><tr><th>SKU</th><th>Nama</th><th>Harga Lama</th><th>Tanggal Set Lama</th><th>Harga Baru</th></tr></thead>
+      <tbody>${rows.map(r=>`<tr>
+        <td><span class="sku-cell">${esc(r.sku)}</span></td>
+        <td>${esc(r.name)}</td>
+        <td class="price-before">${formatRp(r.priceBefore)}</td>
+        <td>${esc(r.setDateBefore)}</td>
+        <td class="price-after">${r.removing ? '<span class="badge badge-remove">🗑 Naar Base</span>' : formatRp(r.priceAfter)}</td>
+      </tr>`).join('')}</tbody>
+    </table>`;
+  document.getElementById('previewModal').style.display = 'flex';
+}
+function closeModal(){ document.getElementById('previewModal').style.display='none'; }
+
+async function confirmSave(){
+  if(saving) return;                 // double-submit guard
+  const did = selectedDepotId();
+  if(!did){ showToast('Pilih depo terlebih dahulu','error'); return; }
+  const eff = document.getElementById('effDate').value;
+  const entries = Object.keys(dirty).map(sku => ({ sku, price: dirty[sku], effective_from: eff }));
+  const removes = Object.keys(toRemove).map(sku => ({ sku }));
+  if(!entries.length && !removes.length){ showToast('Belum ada perubahan untuk disimpan','error'); return; }
+  const nRem = removes.length, nEnt = entries.length;
+  if(!confirm('Confirm simpan: '+nEnt+' harga + '+nRem+' reset-naar-base?')) return;
+  saving = true;
+  try {
+    const d = await api('/api/admin/products/prices', { method:'POST', body: JSON.stringify({ entries, removes, depotIds:[did] }) });
+    const msg = (d.changedCount? d.changedCount+' harga set; ':'') + (d.removedCount? d.removedCount+' reset-naar-base; ':'');
+    showToast('✅ '+msg+'disimpan (skipped '+d.skipped+')','success');
+    document.getElementById('previewModal').style.display='none';
+    dirty = {};
+    toRemove = {};
+    await loadPrices();
+  } catch(e){ showToast('❌ Gagal: '+e.message,'error'); }
+  finally { saving = false; }
+}
+
+loadPrices();
+</script>
+<div id="appFooter"></div>
+<script src="js/include.js"></script>
+</body>
+</html>

@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WIM Admin — Produk & Harga</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f0f2f5;color:#1a1a2e;font-size:14px}
+
+/* Nav */
+.topnav{background:#1a1a2e;color:#fff;padding:0 24px;display:flex;align-items:center;height:56px;position:sticky;top:0;z-index:100}
+.topnav .brand{font-weight:700;font-size:16px;margin-right:32px}
+.topnav .brand span{color:#8e8ea0;font-weight:400}
+.topnav nav{display:flex;gap:4px;flex:1}
+.topnav nav a{color:#b0b0c8;text-decoration:none;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:500;transition:all .15s}
+.topnav nav a:hover{color:#fff;background:rgba(255,255,255,.08)}
+.topnav nav a.active{color:#fff;background:#4361ee}
+.topnav .user-info{font-size:12px;color:#8e8ea0;display:flex;align-items:center;gap:8px}
+.topnav .user-info .role-badge{background:#4361ee;padding:2px 8px;border-radius:6px;font-size:11px;color:#fff}
+.topnav .logout{color:#e63946;cursor:pointer;font-size:12px;margin-left:12px;text-decoration:none}
+
+/* Layout */
+.container{max-width:1280px;margin:0 auto;padding:24px}
+.page-title{font-size:20px;font-weight:700;margin-bottom:20px}
+.page-title .sub{font-size:13px;color:#8e8ea0;font-weight:400}
+
+/* Card */
+.card{background:#fff;border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,.04);overflow:hidden}
+.card-header{padding:16px 20px;border-bottom:1px solid #f0f2f5;display:flex;justify-content:space-between;align-items:center}
+.card-header h3{font-size:15px;font-weight:600}
+.card-body{padding:0;overflow-x:auto}
+.card-footer{padding:12px 20px;border-top:1px solid #f0f2f5;font-size:12px;color:#8e8ea0;text-align:right}
+
+/* Tables */
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{padding:10px 14px;text-align:left;font-weight:600;color:#6c6c80;font-size:11px;text-transform:uppercase;letter-spacing:.5px;background:#fafbfc;border-bottom:1px solid #eef0f4}
+td{padding:10px 14px;border-bottom:1px solid #f0f2f5}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#f8f9fc}
+
+/* Status badges */
+.status-badge{display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600}
+.status-ok{background:#d4f5e2;color:#0a7c42}
+.status-warn{background:#fff3cd;color:#856404}
+.status-miss{background:#fde8e8;color:#c0392b}
+.status-info{background:#e8f0fe;color:#4361ee}
+
+/* Buttons */
+.btn{display:inline-flex;align-items:center;gap:4px;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;border:none;text-decoration:none}
+.btn-primary{background:#4361ee;color:#fff}
+.btn-primary:hover{background:#3651d4}
+.btn-success{background:#0a7c42;color:#fff}
+.btn-success:hover{background:#086534}
+.btn-danger{background:#e63946;color:#fff}
+.btn-danger:hover{background:#c5303c}
+.btn-outline{background:transparent;color:#4361ee;border:1px solid #d0d5dd}
+.btn-outline:hover{background:#f0f2f5}
+.btn-sm{padding:5px 10px;font-size:12px}
+
+/* Filters bar */
+.filters{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
+.filters label{font-size:12px;font-weight:600;color:#6c6c80}
+.filters select,.filters input{padding:6px 10px;border:1px solid #d0d5dd;border-radius:6px;font-size:13px;background:#fff;color:#1a1a2e}
+.filters select:focus,.filters input:focus{outline:none;border-color:#4361ee}
+.filters .clear-btn{font-size:12px;color:#8e8ea0;cursor:pointer;text-decoration:none}
+
+/* Inline form */
+.inline-form{display:none;padding:16px 20px;background:#f8f9fc;border-bottom:1px solid #f0f2f5}
+.inline-form.open{display:block}
+.inline-form .form-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:12px}
+.inline-form .form-field{display:flex;flex-direction:column;gap:4px}
+.inline-form .form-field label{font-size:11px;font-weight:600;color:#6c6c80;text-transform:uppercase;letter-spacing:.3px}
+.inline-form .form-field input,.inline-form .form-field select{padding:7px 10px;border:1px solid #d0d5dd;border-radius:6px;font-size:13px;color:#1a1a2e;background:#fff}
+.inline-form .form-field input:focus,.inline-form .form-field select:focus{outline:none;border-color:#4361ee;box-shadow:0 0 0 2px rgba(67,97,238,.15)}
+.inline-form .form-actions{display:flex;gap:8px;justify-content:flex-end}
+
+/* Loading/error/empty */
+.loading{text-align:center;padding:40px;color:#8e8ea0}
+.error-bar{background:#fde8e8;color:#c0392b;padding:12px 20px;border-radius:8px;margin-bottom:16px;font-size:13px;display:none}
+.empty-state{text-align:center;padding:40px;color:#8e8ea0}
+.empty-state .icon{font-size:36px;margin-bottom:8px;display:block}
+.empty-state p{font-size:13px;margin-top:4px}
+
+/* Toast notification */
+.toast{position:fixed;top:20px;right:20px;padding:12px 20px;border-radius:8px;font-size:13px;font-weight:500;z-index:999;display:none;box-shadow:0 4px 12px rgba(0,0,0,.12);animation:fadeIn .25s ease}
+.toast-success{background:#d4f5e2;color:#0a7c42;border:1px solid #a8e6c1}
+.toast-error{background:#fde8e8;color:#c0392b;border:1px solid #f5c6cb}
+@keyframes fadeIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+
+/* Price highlight */
+.price-cell{font-weight:600;color:#1a1a2e;white-space:nowrap}
+.sku-cell{font-family:monospace;font-size:12px;color:#6c6c80}
+.img-thumb{display:inline-block;width:44px;height:44px;object-fit:cover;border-radius:8px;border:1px solid #e0e4ec;background:#f7f8fa}
+</style>
+</head>
+<body data-page="products">
+<div id="appHeader"></div>
+<div class="container">
+  <div class="error-bar" id="errorBar"></div>
+  <div class="toast" id="toast"></div>
+
+  <div class="page-title">
+    🏷️ Produk & Harga <span class="sub" id="productCount"></span>
+    <button class="btn btn-success" onclick="toggleForm()" id="addBtn" style="margin-left:12px;vertical-align:middle">＋ Tambah Produk</button>
+  </div>
+
+  <!-- Inline Add Form -->
+  <div class="inline-form" id="addForm">
+    <div class="form-row">
+      <div class="form-field">
+        <label>SKU</label>
+        <input type="text" id="fSku" placeholder="Cth: BRG-001" autocomplete="off">
+      </div>
+      <div class="form-field">
+        <label>Nama Produk</label>
+        <input type="text" id="fName" placeholder="Nama produk" autocomplete="off">
+      </div>
+      <div class="form-field">
+        <label>Merek / Brand</label>
+        <input type="text" id="fBrand" placeholder="Cth: Wings" autocomplete="off" list="brandList">
+        <datalist id="brandList"></datalist>
+      </div>
+      <div class="form-field">
+        <label>Kategori</label>
+        <input type="text" id="fCategory" placeholder="Cth: Makanan" autocomplete="off">
+      </div>
+      <div class="form-field">
+        <label>Satuan / Unit</label>
+        <input type="text" id="fUnit" placeholder="Cth: PCS" autocomplete="off">
+      </div>
+      <div class="form-field">
+        <label>Harga (Rp)</label>
+        <input type="number" id="fPrice" placeholder="0" min="0" step="1">
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-outline" onclick="toggleForm()">Batal</button>
+      <button class="btn btn-primary" onclick="addProduct()">💾 Simpan Produk</button>
+    </div>
+  </div>
+
+  <!-- Inline Edit Form -->
+  <div class="inline-form" id="editForm">
+    <div class="form-row">
+      <div class="form-field">
+        <label>Foto Produk</label>
+        <input type="file" id="eImage" accept="image/*" onchange="previewEditImage(event)">
+        <img id="eImagePreview" class="img-thumb" style="display:none;width:72px;height:72px;object-fit:cover;border-radius:8px;border:1px solid #d0d5dd">
+        <div style="font-size:11px;color:#8e8ea0">PNG/JPG, max ~1MB</div>
+      </div>
+      <div class="form-field">
+        <label>SKU</label>
+        <input type="text" id="eSku" disabled>
+      </div>
+      <div class="form-field">
+        <label>Nama Produk</label>
+        <input type="text" id="eName" autocomplete="off">
+      </div>
+      <div class="form-field">
+        <label>Merek / Brand</label>
+        <input type="text" id="eBrand" list="brandList" autocomplete="off">
+      </div>
+      <div class="form-field">
+        <label>Kategori</label>
+        <input type="text" id="eCategory" autocomplete="off">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-field">
+        <label>Satuan / Unit</label>
+        <input type="text" id="eUnit" autocomplete="off">
+      </div>
+      <div class="form-field">
+        <label>Qty / Unit</label>
+        <input type="number" id="eQtyPerUnit" min="1" step="1">
+      </div>
+      <div class="form-field">
+        <label>Harga (Rp)</label>
+        <input type="number" id="ePrice" min="0" step="1">
+      </div>
+      <div class="form-field">
+        <label>Berat</label>
+        <input type="number" id="eWeight" min="0" step="0.1">
+      </div>
+      <div class="form-field">
+        <label>Satuan Berat</label>
+        <input type="text" id="eWeightUnit" autocomplete="off" placeholder="pcs">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-field" style="grid-column:span 2">
+        <label>Keterangan (Description)</label>
+        <textarea id="eDescription" rows="2" style="padding:7px 10px;border:1px solid #d0d5dd;border-radius:6px;font-size:13px;color:#1a1a2e;font-family:inherit;resize:vertical"></textarea>
+      </div>
+    </div>
+    <div class="form-actions">
+      <span id="editUuid" style="display:none"></span>
+      <button class="btn btn-outline" onclick="toggleEditForm(false)">Batal</button>
+      <button class="btn btn-primary" onclick="saveProduct()">💾 Simpan Perubahan</button>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="filters">
+    <label>Filter Brand:</label>
+    <select id="brandFilter" onchange="applyFilters()">
+      <option value="">Semua Brand</option>
+    </select>
+    <label>Urutkan Harga:</label>
+    <select id="priceSort" onchange="applyFilters()">
+      <option value="">Default</option>
+      <option value="asc">Termurah → Termahal</option>
+      <option value="desc">Termahal → Termurah</option>
+    </select>
+    <a href="#" class="clear-btn" onclick="clearFilters()">✕ Hapus filter</a>
+  </div>
+
+  <!-- Products table -->
+  <div class="card">
+    <div class="card-header"><h3>🏷️ Daftar Produk</h3></div>
+    <div class="card-body">
+      <div class="loading" id="loadMsg">Memuat data produk...</div>
+      <table id="productTable" style="display:none">
+        <thead>
+          <tr>
+            <th>SKU</th>
+            <th>Nama Produk</th>
+            <th>Merek</th>
+            <th>Kategori</th>
+            <th>Satuan</th>
+            <th style="text-align:right">Harga</th>
+            <th>Foto</th>
+            <th>Aksi</th>
+          </tr>
+        </thead>
+        <tbody id="productBody"></tbody>
+      </table>
+      <div class="empty-state" id="emptyState" style="display:none">
+        <span class="icon">📦</span>
+        <p>Belum ada produk. Tambahkan produk pertama Anda.</p>
+      </div>
+    </div>
+    <div class="card-footer"><span id="totalCount">0</span> produk</div>
+  </div>
+</div>
+
+<script>
+const ADMIN_KEY = 'wim_admin_token';
+function getToken() { return localStorage.getItem(ADMIN_KEY); }
+
+// Restore user info from session
+try {
+  const u = JSON.parse(sessionStorage.getItem('admin_user') || '{}');
+  if(document.getElementById('userName'))document.getElementById('userName').textContent= u.name || '-';
+  if(document.getElementById('userRole'))document.getElementById('userRole').textContent= u.role || '-';
+} catch(e) {}
+
+async function api(path, opts) {
+  const r = await fetch(path, { credentials:'same-origin', headers:{'Accept':'application/json','Content-Type':'application/json'}, ...opts });
+  if (r.status === 401) { logout(); throw new Error('Sesi habis — silakan login ulang'); }
+  const d = await r.json();
+  if (!r.ok) throw new Error(d.error || 'Gagal memproses permintaan');
+  return d;
+}
+
+function logout() { localStorage.removeItem(ADMIN_KEY); sessionStorage.removeItem('admin_user'); fetch('/api/admin/logout', {method:'POST',credentials:'same-origin'}).catch(()=>{}); location.href='index.html'; }
+
+function showToast(msg, type) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast toast-' + type;
+  t.style.display = 'block';
+  setTimeout(() => { t.style.display = 'none'; }, 3500);
+}
+
+// ── Data store
+let allProducts = [];
+let allBrands = [];
+
+// ── Toggle inline form
+function toggleForm() {
+  const f = document.getElementById('addForm');
+  const btn = document.getElementById('addBtn');
+  f.classList.toggle('open');
+  btn.textContent = f.classList.contains('open') ? '✕ Tutup' : '＋ Tambah Produk';
+  if (!f.classList.contains('open')) {
+    document.getElementById('fSku').value = '';
+    document.getElementById('fName').value = '';
+    document.getElementById('fBrand').value = '';
+    document.getElementById('fCategory').value = '';
+    document.getElementById('fUnit').value = '';
+    document.getElementById('fPrice').value = '';
+  }
+}
+
+// ── Add product
+async function addProduct() {
+  const sku = document.getElementById('fSku').value.trim();
+  const name = document.getElementById('fName').value.trim();
+  const brand = document.getElementById('fBrand').value.trim();
+  const category = document.getElementById('fCategory').value.trim();
+  const unit = document.getElementById('fUnit').value.trim();
+  const price = document.getElementById('fPrice').value;
+
+  if (!sku || !name || price === '') {
+    showToast('Lengkapi SKU, Nama Produk, dan Harga terlebih dahulu', 'error');
+    return;
+  }
+
+  const body = { sku, name, brand, category, unit, price: parseInt(price) || 0 };
+
+  try {
+    await api('/api/admin/products', { method:'POST', body: JSON.stringify(body) });
+    showToast('✅ Produk berhasil ditambahkan', 'success');
+    toggleForm();
+    await loadProducts();
+  } catch(e) {
+    showToast('❌ Gagal menambah produk: ' + e.message, 'error');
+  }
+}
+
+// ── Format price in Rupiah
+function formatRp(n) {
+  return new Intl.NumberFormat('id-ID', { style:'currency', currency:'IDR', minimumFractionDigits:0, maximumFractionDigits:0 }).format(n || 0);
+}
+
+// ── Price sort direction
+let sortDir = '';
+
+// ── Apply filters + sort
+function applyFilters() {
+  const brandVal = document.getElementById('brandFilter').value;
+  const sortVal = document.getElementById('priceSort').value;
+
+  let filtered = allProducts;
+  if (brandVal) {
+    filtered = filtered.filter(p => p.brand === brandVal);
+  }
+
+  if (sortVal === 'asc') {
+    filtered.sort((a, b) => (a.price || 0) - (b.price || 0));
+  } else if (sortVal === 'desc') {
+    filtered.sort((a, b) => (b.price || 0) - (a.price || 0));
+  }
+
+  renderProducts(filtered);
+}
+
+// ── Clear filters
+function clearFilters() {
+  document.getElementById('brandFilter').value = '';
+  document.getElementById('priceSort').value = '';
+  renderProducts(allProducts);
+}
+
+// ── Render products into table
+function renderProducts(list) {
+  const tb = document.getElementById('productBody');
+  const empty = document.getElementById('emptyState');
+  const table = document.getElementById('productTable');
+  const count = document.getElementById('totalCount');
+  const pc = document.getElementById('productCount');
+
+  pc.textContent = list.length + ' produk';
+  count.textContent = list.length;
+
+  if (list.length === 0) {
+    table.style.display = 'none';
+    empty.style.display = 'block';
+  } else {
+    table.style.display = '';
+    empty.style.display = 'none';
+    tb.innerHTML = list.map(p => `<tr>
+      <td><span class="sku-cell">${esc(p.sku)}</span></td>
+      <td><b>${esc(p.name)}</b>${p.description ? '<br><span style="font-size:11px;color:#8e8ea0">' + esc(String(p.description).length > 40 ? p.description.slice(0,40) + '…' : p.description) + '</span>' : ''}</td>
+      <td>${esc(p.brand)}</td>
+      <td>${esc(p.category)}</td>
+      <td>${esc(p.unit || '-')}${p.qtyPerUnit ? ' ×' + esc(p.qtyPerUnit) : ''}</td>
+      <td style="text-align:right"><span class="price-cell">${formatRp(p.price)}</span></td>
+      <td>${p.image ? '<img class="img-thumb" src="' + p.image + '" alt="' + esc(p.sku) + '">' : '<span style="color:#c0c4d0;font-size:18px">⚪</span>'}</td>
+      <td><button class="btn btn-outline btn-sm" onclick="openEdit('${esc(p.uuid)}')">✏️ Edit</button></td>
+    </tr>`).join('');
+  }
+}
+
+function esc(s) { return String(s||'').replace(/[&<>"']/g, function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];}); }
+
+// ── Edit product (image/details/pricing)
+let editImageData = '';
+
+function toggleEditForm(open) {
+  const f = document.getElementById('editForm');
+  if (open) { f.classList.add('open'); }
+  else {
+    f.classList.remove('open');
+    editImageData = '';
+    document.getElementById('eImage').value = '';
+    document.getElementById('eImagePreview').style.display = 'none';
+  }
+}
+
+function openEdit(uuid) {
+  const p = allProducts.find(x => x.uuid === uuid);
+  if (!p) { showToast('Produk tidak ditemukan', 'error'); return; }
+  // Close add form if open
+  const addf = document.getElementById('addForm');
+  if (addf.classList.contains('open')) toggleForm();
+
+  document.getElementById('editUuid').textContent = p.uuid;
+  document.getElementById('eSku').value = p.sku || '';
+  document.getElementById('eName').value = p.name || '';
+  document.getElementById('eBrand').value = p.brand || '';
+  document.getElementById('eCategory').value = p.category || '';
+  document.getElementById('eUnit').value = p.unit || '';
+  document.getElementById('eQtyPerUnit').value = p.qtyPerUnit || 1;
+  document.getElementById('ePrice').value = p.price || 0;
+  document.getElementById('eWeight').value = p.weight || 0;
+  document.getElementById('eWeightUnit').value = p.weightUnit || 'pcs';
+  document.getElementById('eDescription').value = p.description || '';
+  editImageData = p.image || '';
+  const prev = document.getElementById('eImagePreview');
+  if (editImageData) { prev.src = editImageData; prev.style.display = ''; }
+  else { prev.style.display = 'none'; }
+
+  toggleEditForm(true);
+  window.scrollTo({ top: document.getElementById('editForm').getBoundingClientRect().top + window.scrollY - 80, behavior: 'smooth' });
+}
+
+function previewEditImage(ev) {
+  const file = ev.target.files && ev.target.files[0];
+  if (!file) return;
+  if (file.size > 1200000) { showToast('Foto terlalu besar (max 1MB)', 'error'); ev.target.value=''; return; }
+  const reader = new FileReader();
+  reader.onload = () => { editImageData = reader.result; document.getElementById('eImagePreview').src = editImageData; document.getElementById('eImagePreview').style.display = ''; };
+  reader.readAsDataURL(file);
+}
+
+async function saveProduct() {
+  const uuid = document.getElementById('editUuid').textContent;
+  const name = document.getElementById('eName').value.trim();
+  const price = document.getElementById('ePrice').value;
+  if (!name || price === '') { showToast('Nama dan Harga diperlukan', 'error'); return; }
+  const body = {
+    name,
+    brand: document.getElementById('eBrand').value.trim(),
+    category: document.getElementById('eCategory').value.trim(),
+    unit: document.getElementById('eUnit').value.trim(),
+    qty_per_unit: parseInt(document.getElementById('eQtyPerUnit').value, 10),
+    price: parseInt(price, 10) || 0,
+    weight: parseFloat(document.getElementById('eWeight').value) || 0,
+    weight_unit: document.getElementById('eWeightUnit').value.trim() || 'pcs',
+    description: document.getElementById('eDescription').value,
+  };
+  if (editImageData) body.image = editImageData;
+  try {
+    await api('/api/admin/products/' + uuid, { method: 'PATCH', body: JSON.stringify(body) });
+    showToast('✅ Produk diperbarui', 'success');
+    toggleEditForm(false);
+    await loadProducts();
+  } catch(e) {
+    showToast('❌ Gagal diperbarui: ' + e.message, 'error');
+  }
+}
+
+// ── Load products
+async function loadProducts() {
+  const msg = document.getElementById('loadMsg');
+  const table = document.getElementById('productTable');
+  const empty = document.getElementById('emptyState');
+  const bar = document.getElementById('errorBar');
+
+  try {
+    const d = await api('/api/admin/products');
+    allProducts = d.products || [];
+    allBrands = d.brands || [];
+
+    // Populate brand filter dropdown
+    const sel = document.getElementById('brandFilter');
+    const dl = document.getElementById('brandList');
+    sel.innerHTML = '<option value="">Semua Brand</option>';
+    dl.innerHTML = '';
+    allBrands.forEach(b => {
+      sel.innerHTML += `<option value="${esc(b)}">${esc(b)}</option>`;
+      dl.innerHTML += `<option value="${esc(b)}">`;
+    });
+
+    // Also collect unique brands from product data
+    const uniqueBrands = [...new Set([...allBrands, ...allProducts.map(p => p.brand).filter(Boolean)])];
+    uniqueBrands.forEach(b => {
+      const exists = [...sel.options].some(o => o.value === b);
+      if (!exists) {
+        sel.innerHTML += `<option value="${esc(b)}">${esc(b)}</option>`;
+      }
+    });
+
+    msg.style.display = 'none';
+    renderProducts(allProducts);
+  } catch(e) {
+    msg.textContent = 'Gagal memuat data: ' + e.message;
+    msg.style.color = '#c0392b';
+    bar.textContent = 'Terjadi kesalahan saat memuat produk: ' + e.message;
+    bar.style.display = 'block';
+  }
+}
+
+loadProducts();
+
+document.querySelectorAll('.rencana-drop').forEach(function(dd){var menu=dd.querySelector('span[style*="position:absolute"]');if(!menu)return;dd.addEventListener('mouseenter',function(){menu.style.display='block'});dd.addEventListener('mouseleave',function(){menu.style.display='none'});});
+</script>
+<div id="appFooter"></div>
+<script src="js/include.js"></script>
+</body>
+</html>

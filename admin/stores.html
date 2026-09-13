@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WIM Admin — Toko</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f0f2f5;color:#1a1a2e;font-size:14px}
+.topnav{background:#1a1a2e;color:#fff;padding:0 24px;display:flex;align-items:center;height:56px;position:sticky;top:0;z-index:100}
+.topnav .brand{font-weight:700;font-size:16px;margin-right:32px}.topnav .brand span{color:#8e8ea0;font-weight:400}
+.topnav nav{display:flex;gap:4px;flex:1}
+.topnav nav a{color:#b0b0c8;text-decoration:none;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:500;transition:all .15s}
+.topnav nav a:hover{color:#fff;background:rgba(255,255,255,.08)}
+.topnav nav a.active{color:#fff;background:#4361ee}
+.topnav .user-info{font-size:12px;color:#8e8ea0;display:flex;align-items:center;gap:8px}
+.topnav .user-info .role-badge{background:#4361ee;padding:2px 8px;border-radius:6px;font-size:11px;color:#fff}
+.topnav .logout{color:#e63946;cursor:pointer;font-size:12px;margin-left:12px;text-decoration:none}
+.container{max-width:1500px;margin:0 auto;padding:24px}
+.page-title{font-size:20px;font-weight:700;margin-bottom:20px}
+.page-title .sub{font-size:13px;color:#8e8ea0}
+.filters{display:flex;gap:10px;margin-bottom:16px;align-items:center;flex-wrap:wrap;background:#fff;padding:12px 16px;border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,.04)}
+.filters label{font-size:12px;font-weight:600;color:#6c6c80;white-space:nowrap}
+.filters input,.filters select{padding:7px 10px;border:1.5px solid #e0e0e8;border-radius:8px;font-size:13px;background:#fff}
+.card{background:#fff;border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,.04);overflow:hidden}
+.card-footer{background:#fff;padding:12px 20px;border-top:1px solid #f0f2f5;display:flex;justify-content:flex-end;align-items:center;gap:10px}
+.card-body{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{padding:10px 14px;text-align:left;font-weight:600;color:#6c6c80;font-size:11px;text-transform:uppercase;letter-spacing:.5px;background:#fafbfc;border-bottom:1px solid #eef0f4}
+td{padding:10px 14px;border-bottom:1px solid #f0f2f5}
+tr:hover td{background:#f8f9fc}
+.status-badge{display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600}
+.status-ok{background:#d4f5e2;color:#0a7c42}
+.status-warn{background:#fff3cd;color:#856404}
+.status-miss{background:#fde8e8;color:#c0392b}
+.btn{display:inline-flex;align-items:center;gap:4px;padding:8px 14px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none}
+.btn-primary{background:#4361ee;color:#fff}
+.btn-success{background:#0a7c42;color:#fff}
+.btn-danger{background:#e63946;color:#fff}
+.btn-outline{background:transparent;color:#4361ee;border:1px solid #d0d5dd}
+.btn-sm{padding:5px 10px;font-size:12px}
+.inline-form{display:none;padding:16px 20px;background:#f8f9fc;border-bottom:1px solid #f0f2f5}
+.inline-form.open{display:block}
+.form-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:12px}
+.form-field{display:flex;flex-direction:column;gap:4px}
+.form-field label{font-size:11px;font-weight:600;color:#6c6c80;text-transform:uppercase;letter-spacing:.3px}
+.form-field input,.form-field select{padding:7px 10px;border:1px solid #d0d5dd;border-radius:6px;font-size:13px;color:#1a1a2e;background:#fff}
+.form-actions{display:flex;gap:8px;justify-content:flex-end}
+.loading{text-align:center;padding:40px;color:#8e8ea0}
+.error-bar{background:#fde8e8;color:#c0392b;padding:12px 20px;border-radius:8px;margin-bottom:16px;font-size:13px;display:none}
+.toast{position:fixed;top:20px;right:20px;padding:12px 20px;border-radius:8px;font-size:13px;font-weight:500;z-index:999;display:none;box-shadow:0 4px 12px rgba(0,0,0,.12);animation:fadeIn .25s ease}
+.toast-success{background:#d4f5e2;color:#0a7c42}
+.toast-error{background:#fde8e8;color:#c0392b}
+@keyframes fadeIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+</style>
+</head>
+<body data-page="stores">
+<div id="appHeader"></div>
+<div class="container">
+  <div class="error-bar" id="errorBar"></div>
+  <div class="toast" id="toast"></div>
+  <div class="page-title">🏬 Manajemen Toko (Customer) <span class="sub" id="storeCount"></span>
+    <button class="btn btn-success" onclick="toggleForm()" id="addBtn" style="margin-left:12px">＋ Tambah Toko</button>
+  </div>
+
+  <div class="inline-form" id="addForm">
+    <div class="form-row">
+      <div class="form-field"><label>Nama Toko</label><input type="text" id="fName"></div>
+      <div class="form-field"><label>Pemilik / Owner</label><input type="text" id="fOwner"></div>
+      <div class="form-field"><label>No. HP</label><input type="text" id="fPhone"></div>
+      <div class="form-field"><label>Channel</label>
+        <select id="fChannel"><option value="">—</option><option value="GT">GT</option><option value="MT">MT</option><option value="Horeka">Horeka</option><option value="Institutional">Institutional</option></select>
+      </div>
+      <div class="form-field"><label>Kategori</label><input type="text" id="fCategory" placeholder="Retail Kecil" list="catList"><datalist id="catList"></datalist></div>
+    </div>
+    <div class="form-row">
+      <div class="form-field"><label>Alamat</label><input type="text" id="fAddress"></div>
+      <div class="form-field"><label>Kota</label><input type="text" id="fCity"></div>
+      <div class="form-field"><label>Latitude</label><input type="number" id="fLat" step="0.0000001"></div>
+      <div class="form-field"><label>Longitude</label><input type="number" id="fLng" step="0.0000001"></div>
+      <div class="form-field"><label>Radius Geofence (meter)</label><input type="number" id="fGeoRadius" step="1" min="0" placeholder="default 10"><div style="font-size:10px;color:#8e8ea0;margin-top:2px">Kosongkan = default 10 m. Naikkan bila toko besar sering salah "Luar Area".</div></div>
+      <div class="form-field" id="fStatusWrap"><label>Status</label>
+        <select id="fStatus"><option value="active">Active</option><option value="inactive">Inactive</option></select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-field"><label>Sales Ditugaskan (ID)</label><input type="number" id="fSalesperson" placeholder="user id"></div>
+      <div class="form-field"><label>Limit Kredit (Rp)</label><input type="number" id="fCredit" step="any" placeholder="0"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-field"><label>Alamat KM / Kecamatan</label><input type="text" id="fKecamatan" placeholder="kecamatan"></div>
+      <div class="form-field"><label>Kelurahan</label><input type="text" id="fKelurahan" placeholder="kelurahan"></div>
+      <div class="form-field"><label>Kode Pos</label><input type="text" id="fKodePos" placeholder="kode pos"></div>
+      <div class="form-field"><label>Provinsi</label><input type="text" id="fProvince" placeholder="provinsi"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-field"><label>Kendaraan</label><input type="text" id="fKendaraan" placeholder="kendaraan"></div>
+      <div class="form-field"><label>NIK</label><input type="text" id="fNik" placeholder="NIK"></div>
+      <div class="form-field"><label>NPWP</label><input type="text" id="fNpwp" placeholder="NPWP"></div>
+      <div class="form-field"><label>Nama NPWP</label><input type="text" id="fNpwpName" placeholder="nama NPWP"></div>
+    </div>
+    <div class="form-actions">
+      <span id="editUuid" style="display:none"></span>
+      <button class="btn btn-outline" onclick="toggleForm()">Batal</button>
+      <button class="btn btn-primary" onclick="saveStore()">💾 Simpan Toko</button>
+    </div>
+  </div>
+
+  <div class="filters">
+    <label>Cari</label><input type="text" id="searchQ" placeholder="Nama / kota..." onchange="page=1;loadStores()">
+    <label>Channel</label><select id="fChanFilter" onchange="page=1;loadStores()"><option value="">All</option><option value="GT">GT</option><option value="MT">MT</option><option value="Horeka">Horeka</option><option value="Institutional">Institutional</option></select>
+    <label>Status</label><select id="fStatFilter" onchange="page=1;loadStores()"><option value="">All</option><option value="active">Active</option><option value="inactive">Inactive</option></select>
+    <span style="color:#6c6c80;font-size:13px">per page</span>
+    <select id="perPageSel" onchange="page=1;loadStores()"><option value="25">25</option><option value="50">50</option><option value="100" selected>100</option></select>
+  </div>
+
+  <div class="card">
+    <div class="card-body">
+      <div class="loading" id="loadMsg">Memuat toko...</div>
+      <table id="storeTable" style="display:none">
+        <thead><tr><th>Nama</th><th>Pemilik</th><th>Phone</th><th>Channel</th><th>Kategori</th><th>Kota</th><th>Status</th><th>Aksi</th></tr></thead>
+        <tbody id="storeBody"></tbody>
+      </table>
+    </div>
+    <div class="card-footer">
+      <span id="pageInfo" style="font-size:13px;color:#6c6c80"></span>
+      <button class="btn btn-outline btn-sm" onclick="page=Math.max(1,page-1);loadStores()">‹ Prev</button>
+      <button class="btn btn-outline btn-sm" onclick="page+=1;loadStores()">Next ›</button>
+    </div>
+  </div>
+</div>
+<script>
+const ADMIN_KEY='wim_admin_token';
+let allStores=[];let editUuid='';let page=1;let perPage=100;let totalStores=0;
+try{const u=JSON.parse(sessionStorage.getItem('admin_user')||'{}');if(document.getElementById('userName'))document.getElementById('userName').textContent=u.name||'-';if(document.getElementById('userRole'))document.getElementById('userRole').textContent=u.role||'-'}catch(e){}
+async function api(path,opts){const r=await fetch(path,{credentials:'same-origin',headers:{'Accept':'application/json','Content-Type':'application/json'},...opts});if(r.status===401){logout();throw new Error('Sesi habis')}const d=await r.json();if(!r.ok)throw new Error(d.error||'Gagal');return d}
+function logout(){localStorage.removeItem(ADMIN_KEY);sessionStorage.removeItem('admin_user');fetch('/api/admin/logout',{method:'POST',credentials:'same-origin'}).catch(()=>{});location.href='index.html'}
+function showToast(msg,type){const t=document.getElementById('toast');t.textContent=msg;t.className='toast toast-'+type;t.style.display='block';setTimeout(()=>{t.style.display='none'},3500)}
+function esc(s){return String(s||'').replace(/[&<>"']/g,function(m){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]})}
+function toggleForm(){
+  const f=document.getElementById('addForm'),b=document.getElementById('addBtn');
+  f.classList.toggle('open');
+  b.textContent=f.classList.contains('open')?'✕ Tutup':'＋ Tambah Toko';
+  if(!f.classList.contains('open')){editUuid='';document.getElementById('editUuid').textContent='';}
+  // status field only for editing (new stores are created active)
+  document.getElementById('fStatusWrap').style.display = editUuid ? '' : 'none';
+}
+function openEdit(uuid){
+  const s=allStores.find(x=>x.uuid===uuid);if(!s)return;
+  editUuid=uuid;document.getElementById('editUuid').textContent=uuid;
+  document.getElementById('fName').value=s.name||'';
+  document.getElementById('fOwner').value=s.owner_name||'';
+  document.getElementById('fPhone').value=s.phone||'';
+  document.getElementById('fChannel').value=s.channel||'';
+  document.getElementById('fCategory').value=s.category||'';
+  document.getElementById('fAddress').value=s.address||'';
+  document.getElementById('fCity').value=s.city||'';
+  document.getElementById('fLat').value=s.latitude!==undefined?s.latitude:s.lat||'';
+  document.getElementById('fLng').value=s.longitude!==undefined?s.longitude:s.lng||'';
+  document.getElementById('fGeoRadius').value=s.geofence_radius_m!=null&&s.geofence_radius_m!==undefined?s.geofence_radius_m:'';
+  document.getElementById('fStatus').value=s.status||'active';
+  document.getElementById('fSalesperson').value=s.assigned_salesperson_id||'';
+  document.getElementById('fCredit').value=s.credit_limit||'';
+  document.getElementById('fKecamatan').value=s.kecamatan||'';
+  document.getElementById('fKelurahan').value=s.kelurahan||'';
+  document.getElementById('fKodePos').value=s.kode_pos||'';
+  document.getElementById('fProvince').value=s.province||'';
+  document.getElementById('fKendaraan').value=s.kendaraan||'';
+  document.getElementById('fNik').value=s.nik||'';
+  document.getElementById('fNpwp').value=s.npwp||'';
+  document.getElementById('fNpwpName').value=s.npwp_name||'';
+  // Ensure the form is OPEN without clearing editUuid (toggleForm clears it on close).
+  if(!document.getElementById('addForm').classList.contains('open')){ toggleForm(); }
+}
+function populateCatList(){
+  const cats=[];allStores.forEach(s=>{if(s.category&&!cats.includes(s.category))cats.push(s.category)});
+  ['Retail Kecil','Grosir','Minimarket','Supermarket','Hotel','Restoran'].forEach(c=>{ if(!cats.includes(c)) cats.push(c); });
+  document.getElementById('catList').innerHTML=cats.map(c=>`<option value="${esc(c)}">`).join('');
+}
+function render(){
+  document.getElementById('storeCount').textContent=totalStores+' toko · page '+page;
+  document.getElementById('pageInfo').textContent='Page '+page+' / '+Math.max(1,Math.ceil(totalStores/perPage))+` (${totalStores} total)`;
+  const tb=document.getElementById('storeBody');
+  if(!allStores.length){tb.innerHTML='<tr><td colspan="8" style="text-align:center;padding:20px;color:#8e8ea0">Tidak ada toko</td></tr>';return}
+  tb.innerHTML=allStores.map(s=>{
+    const st=s.status==='active'?'<span class="status-badge status-ok">Active</span>':'<span class="status-badge status-miss">'+(s.status||'?')+'</span>';
+    return `<tr>
+      <td><b>${esc(s.name)}</b><br><span style="font-size:11px;color:#8e8ea0">${esc((s.uuid||'').slice(0,8))}</span></td>
+      <td>${esc(s.owner_name||'-')}</td>
+      <td>${esc(s.phone||'-')}</td>
+      <td><span class="status-badge status-info">${esc(s.channel||'-')}</span></td>
+      <td>${esc(s.category||'-')}</td>
+      <td>${esc(s.city||'-')}</td>
+      <td>${st}</td>
+      <td>
+        <button class="btn btn-outline btn-sm" onclick="openEdit('${esc(s.uuid)}')">✏️ Edit</button>
+        <button class="btn btn-danger btn-sm" title="Hapus toko" onclick="delStore('${esc(s.uuid)}')">✕ Hapus</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+async function delStore(uuid){
+  if(!confirm('Hapus toko ini? (soft-delete)'))return;
+  try{await api('/api/admin/stores/'+uuid,{method:'DELETE'});showToast('✅ Toko hapus','success');await loadStores()}catch(e){showToast('❌ Gagal: '+e.message,'error')}
+}
+async function saveStore(){
+  const name=document.getElementById('fName').value.trim();
+  if(!name){showToast('Nama toko diperlukan','error');return}
+  const body={
+    name,
+    owner_name:document.getElementById('fOwner').value.trim(),
+    phone:document.getElementById('fPhone').value.trim(),
+    channel:document.getElementById('fChannel').value,
+    category:document.getElementById('fCategory').value.trim(),
+    address:document.getElementById('fAddress').value.trim(),
+    city:document.getElementById('fCity').value.trim(),
+    latitude:document.getElementById('fLat').value?parseFloat(document.getElementById('fLat').value):null,
+    longitude:document.getElementById('fLng').value?parseFloat(document.getElementById('fLng').value):null,
+    geofence_radius_m:document.getElementById('fGeoRadius').value!==''?parseInt(document.getElementById('fGeoRadius').value,10):null,
+    status:document.getElementById('fStatus').value,
+    assigned_salesperson_id:document.getElementById('fSalesperson').value?parseInt(document.getElementById('fSalesperson').value,10):null,
+    credit_limit:document.getElementById('fCredit').value?parseFloat(document.getElementById('fCredit').value):null,
+    kecamatan:document.getElementById('fKecamatan').value.trim(),
+    kelurahan:document.getElementById('fKelurahan').value.trim(),
+    kode_pos:document.getElementById('fKodePos').value.trim(),
+    province:document.getElementById('fProvince').value.trim(),
+    kendaraan:document.getElementById('fKendaraan').value.trim(),
+    nik:document.getElementById('fNik').value.trim(),
+    npwp:document.getElementById('fNpwp').value.trim(),
+    npwp_name:document.getElementById('fNpwpName').value.trim(),
+  };
+  try{
+    if(editUuid){await api('/api/admin/stores/'+editUuid,{method:'PATCH',body:JSON.stringify(body)});showToast('✅ Toko diperbarui','success')}
+    else{await api('/api/admin/stores',{method:'POST',body:JSON.stringify(body)});showToast('✅ Toko ditambahkan','success')}
+    toggleForm();await loadStores();
+  }catch(e){showToast('❌ Gagal: '+e.message,'error')}
+}
+async function loadStores(){
+  perPage=parseInt(document.getElementById('perPageSel').value,10)||100;
+  document.getElementById('loadMsg').style.display='block';
+  const q=document.getElementById('searchQ').value||'';
+  const chan=document.getElementById('fChanFilter').value||'';
+  const stat=document.getElementById('fStatFilter').value||'';
+  // filters are server-side now, so totals + paging stay consistent
+  try{
+    const d=await api('/api/admin/stores?q='+encodeURIComponent(q)+'&chan='+encodeURIComponent(chan)+'&status='+encodeURIComponent(stat)+'&page='+page+'&per_page='+perPage);
+    allStores=d.stores||[];
+    totalStores=d.total||allStores.length;
+    document.getElementById('loadMsg').style.display='none';document.getElementById('storeTable').style.display='';
+    populateCatList();render();
+  }catch(e){document.getElementById('loadMsg').textContent='Gagal memuat: '+e.message;document.getElementById('loadMsg').style.color='#c0392b'}
+}
+loadStores();
+
+document.querySelectorAll('.rencana-drop').forEach(function(dd){var menu=dd.querySelector('span[style*="position:absolute"]');if(!menu)return;dd.addEventListener('mouseenter',function(){menu.style.display='block'});dd.addEventListener('mouseleave',function(){menu.style.display='none'});});
+</script>
+<div id="appFooter"></div>
+<script src="js/include.js"></script>
+</body>
+</html>

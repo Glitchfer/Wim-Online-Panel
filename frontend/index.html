@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>WIM Online — Masuk</title>
+<link rel="stylesheet" href="css/app.css">
+<style>
+.login-container{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:24px;background:var(--primary-gradient)}
+.login-card{width:100%;max-width:400px;background:#fff;border-radius:16px;padding:32px 24px;box-shadow:0 8px 32px rgba(0,0,0,.15)}
+.login-logo{text-align:center;margin-bottom:28px}
+.login-logo .logo-icon{font-size:48px;margin-bottom:8px}
+.login-logo h2{font-size:24px;font-weight:700;color:var(--dark);margin:0}
+.login-logo p{font-size:13px;color:var(--gray-400);margin:4px 0 0}
+.login-footer{text-align:center;font-size:12px;color:var(--gray-400);margin-top:24px}
+</style>
+</head>
+<body>
+<div class="login-container">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="logo-icon">📦</div>
+      <h2>WIM Online</h2>
+      <p>PT Wahana Inti Mas</p>
+    </div>
+
+    <div class="error-msg" id="errorMsg" style="display:none;"></div>
+
+    <div class="form-group">
+      <label class="form-label">Email</label>
+      <input class="form-input" type="email" id="emailInput" placeholder="nama@perusahaan.com" value="" autocomplete="email">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Password</label>
+      <input class="form-input" type="password" id="passwordInput" placeholder="••••••••" autocomplete="current-password">
+    </div>
+
+    <button class="btn btn-primary btn-lg btn-block" id="loginBtn" onclick="handleLogin()">
+      Masuk
+    </button>
+
+    <div class="login-footer">
+      WIM Online v1.0 — © PT Wahana Inti Mas
+    </div>
+  </div>
+</div>
+
+<script>
+async function handleLogin() {
+  const email = document.getElementById('emailInput').value.trim();
+  const password = document.getElementById('passwordInput').value;
+  const btn = document.getElementById('loginBtn');
+  const errEl = document.getElementById('errorMsg');
+
+  if (!email || !password) {
+    errEl.textContent = 'Masukkan email dan password';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Memverifikasi...';
+  errEl.style.display = 'none';
+
+  try {
+    const resp = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+
+    const data = await resp.json();
+
+    if (!resp.ok) {
+      throw new Error(data.error || 'Login gagal');
+    }
+
+    // Success — store user info in sessionStorage for the frontend
+    if (data.user) {
+      sessionStorage.setItem('wim_user_name', data.user.name || '');
+      sessionStorage.setItem('wim_user_email', data.user.email || '');
+      sessionStorage.setItem('wim_user_role', data.user.role || '');
+      sessionStorage.setItem('wim_driver_id', data.user.driver_id || '');
+      sessionStorage.setItem('wim_token', data.token || '');
+    }
+
+    // Role-based redirect: admin → admin.html, sales → dashboard.html
+    const role = (data.user && data.user.role) || '';
+    if (role === 'admin') {
+      window.location.href = 'admin.html';
+    } else {
+      window.location.href = 'dashboard.html';
+    }
+  } catch (e) {
+    errEl.textContent = `Gagal: ${e.message}`;
+    errEl.style.display = 'block';
+    btn.disabled = false;
+    btn.textContent = 'Masuk';
+  }
+}
+
+// Allow Enter key to submit
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') handleLogin();
+});
+</script>
+</body>
+</html>

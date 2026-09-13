@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WIM Admin — Pesanan</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f0f2f5;color:#1a1a2e;font-size:14px}
+.topnav{background:#1a1a2e;color:#fff;padding:0 24px;display:flex;align-items:center;height:56px;position:sticky;top:0;z-index:100}
+.topnav .brand{font-weight:700;font-size:16px;margin-right:32px}.topnav .brand span{color:#8e8ea0;font-weight:400}
+.topnav nav{display:flex;gap:4px;flex:1}
+.topnav nav a{color:#b0b0c8;text-decoration:none;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:500;transition:all .15s}
+.topnav nav a:hover{color:#fff;background:rgba(255,255,255,.08)}
+.topnav nav a.active{color:#fff;background:#4361ee}
+.topnav .user-info{font-size:12px;color:#8e8ea0;display:flex;align-items:center;gap:8px}
+.topnav .user-info .role-badge{background:#4361ee;padding:2px 8px;border-radius:6px;font-size:11px;color:#fff}
+.topnav .logout{color:#e63946;cursor:pointer;font-size:12px;margin-left:12px;text-decoration:none}
+.container{max-width:1400px;margin:0 auto;padding:24px}
+.page-title{font-size:20px;font-weight:700;margin-bottom:20px}
+.page-title .sub{font-size:13px;color:#8e8ea0;font-weight:400}
+.filters{display:flex;gap:10px;margin-bottom:16px;align-items:center;flex-wrap:wrap;background:#fff;padding:12px 16px;border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,.04)}
+.filters label{font-size:12px;font-weight:600;color:#6c6c80;white-space:nowrap}
+.filters input,.filters select{padding:7px 10px;border:1.5px solid #e0e0e8;border-radius:8px;font-size:13px;background:#fff}
+.filters input:focus,.filters select:focus{outline:none;border-color:#4361ee}
+.filters .sep{width:1px;height:26px;background:#e0e0e8}
+.csv-btn{padding:8px 16px;border:none;border-radius:8px;background:#0a7c42;color:#fff;font-size:13px;font-weight:600;cursor:pointer}
+.card{background:#fff;border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,.04);overflow:hidden}
+.card-body{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{padding:10px 14px;text-align:left;font-weight:600;color:#6c6c80;font-size:11px;text-transform:uppercase;letter-spacing:.5px;background:#fafbfc;border-bottom:1px solid #eef0f4}
+td{padding:10px 14px;border-bottom:1px solid #f0f2f5}
+tr:hover td{background:#f8f9fc}
+.status-badge{display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600}
+.status-ok{background:#d4f5e2;color:#0a7c42}
+.status-warn{background:#fff3cd;color:#856404}
+.status-info{background:#e8f0fe;color:#4361ee}
+.loading{text-align:center;padding:40px;color:#8e8ea0}
+.total-row{background:#fafbfc;font-weight:700}
+.clickable-row:hover td{background:#eaf1ff}
+.clickable-row .btn-detail{font-size:11px}
+.modal{position:fixed;inset:0;background:rgba(15,20,35,.55);display:none;align-items:center;justify-content:center;z-index:900}
+.modal-inner{background:#fff;border-radius:14px;box-shadow:0 10px 40px rgba(0,0,0,.2);max-width:760px;width:94%;max-height:88vh;display:flex;flex-direction:column;overflow:hidden}
+.modal-head{padding:16px 20px;border-bottom:1px solid #f0f2f5;font-size:15px;font-weight:700;display:flex;justify-content:space-between;align-items:center}
+.modal-body{padding:20px;overflow:auto;background:#f7f8fa}
+.modal-foot{padding:14px 20px;border-top:1px solid #f0f2f5;display:flex;justify-content:flex-end;gap:10px}
+.btn{padding:8px 14px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none}
+.btn-primary{background:#4361ee;color:#fff}
+.btn-outline{background:#fff;color:#4361ee;border:1px solid #d0d5dd}
+.btn-edit{background:#fff;color:#f59e0b;border:1.5px solid #f59e0b;padding:4px 10px;font-size:12px;border-radius:7px}
+.btn-edit:hover{background:#fef3c7}
+.btn-danger{background:#e63946;color:#fff}
+.edit-note{font-size:12px;color:#6c6c80;margin:2px 0 12px}
+/* Invoice-style sheet */
+.inv-sheet{max-width:680px;margin:0 auto;background:#fff;border:1px solid #e5e8ef;border-radius:14px;padding:28px}
+.inv-status{background:#fff3d6;color:#8a6d1a;padding:8px 14px;border-radius:8px;font-size:12px;font-weight:600;text-align:center;margin-bottom:14px}
+.inv-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px}
+.inv-co .co-label{font-size:11px;color:#8e8ea0;text-transform:uppercase;letter-spacing:1px}
+.inv-co .co-name{font-size:18px;font-weight:700;color:#1a1a2e;line-height:1.2}
+.inv-title-box{text-align:right}
+.inv-title-box h1{font-size:20px;font-weight:800;color:#1a1a2e;margin:0}
+.inv-badge{display:inline-block;margin-top:8px;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;background:#fde8e8;color:#c0392b}
+.inv-badge.confirmed{background:#d4f5e2;color:#0a7c42}
+.inv-sep{border:none;border-top:1px solid #e5e8ef;margin:16px 0}
+.inv-info{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.inv-info .blk .lbl{font-size:11px;color:#8e8ea0;text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px}
+.inv-info .blk .val{font-size:14px;font-weight:600;color:#1a1a2e}
+.inv-info .blk .val-sub{font-size:12px;color:#8e8ea0}
+.inv-meta{display:flex;gap:10px;flex-wrap:wrap;background:#f0f2f5;border-radius:10px;padding:10px 14px;margin-top:6px}
+.inv-meta .om{flex:1;min-width:110px}
+.inv-meta .om .lbl{font-size:10px;color:#8e8ea0;text-transform:uppercase}
+.inv-meta .om .val{font-size:14px;font-weight:700}
+.inv-table{width:100%;border-collapse:collapse;font-size:13px}
+.inv-table th{padding:9px 11px;text-align:left;color:#8e8ea0;font-size:11px;text-transform:uppercase;background:#fafbfc;border-bottom:1px solid #e5e8ef}
+.inv-table td{padding:9px 11px;border-bottom:1px solid #e5e8ef}
+.inv-table td.num,th.num{text-align:right}
+.inv-table tr.bonus td{color:#0a7c42;font-size:12px;font-style:italic}
+.inv-table .total-row td{background:#fafbfc;font-weight:700}
+</style>
+</head>
+<body data-page="orders">
+<div id="appHeader"></div>
+<div class="container">
+  <div class="page-title">📦 Pesanan <span class="sub">Riwayat order tim</span></div>
+  <div class="filters">
+    <label>Dari</label><input type="date" id="fFrom" onchange="load()">
+    <label>Sampai</label><input type="date" id="fTo" onchange="load()">
+    <span class="sep"></span>
+    <label>Sales</label>
+    <select id="fSales" onchange="load()"><option value="">Semua Sales</option></select>
+    <label>Region</label>
+    <select id="fRegion" onchange="filterDepots();load()"><option value="">Semua Region</option></select>
+    <label>Depo</label>
+    <select id="fDepot" onchange="load()"><option value="">Semua Depo</option></select>
+    <button class="csv-btn" onclick="downloadCsv()">⬇ CSV</button>
+  </div>
+  <div class="card">
+    <div class="card-body">
+      <div class="loading" id="orderLoading">Memuat...</div>
+      <table id="orderTable" style="display:none">
+        <thead><tr><th>ID</th><th>Sales</th><th>Toko</th><th>Region</th><th>Bayar</th><th>Item</th><th>Total</th><th>Promo/Bonus</th><th>Status</th><th>Tanggal</th><th>Aksi</th></tr></thead>
+        <tbody id="orderBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Order detail modal (Kupon Pesanan-style) -->
+<div class="modal" id="orderModal">
+  <div class="modal-inner">
+    <div class="modal-head"><span>📄 Detail Pesanan</span><span style="cursor:pointer" onclick="closeOrderModal()">✕</span></div>
+    <div class="modal-body">
+      <div class="loading" id="invLoading">Memuat detail pesanan...</div>
+      <div id="invSheet" style="display:none"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-primary" onclick="orderPrint()">🖨️ Print / PDF</button>
+      <button class="btn btn-outline" onclick="closeOrderModal()">Tutup</button>
+    </div>
+  </div>
+</div>
+<!-- Edit Order modal -->
+<div class="modal" id="editModal">
+  <div class="modal-inner">
+    <div class="modal-head"><span>✏️ Ubah Pesanan</span><span style="cursor:pointer" onclick="closeEditModal()">✕</span></div>
+    <div class="modal-body">
+      <div class="loading" id="editLoading">Memuat items...</div>
+      <div id="editSheet" style="display:none"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-primary" onclick="saveEditOrder()">💾 Save</button>
+      <button class="btn btn-danger" onclick="closeEditModal()">Tutup</button>
+    </div>
+  </div>
+</div>
+<script>
+const ADMIN_KEY='wim_admin_token';
+let ALL_ORDERS=[], OPTS={users:[],regions:[],depots:[]};
+try{const u=JSON.parse(sessionStorage.getItem('admin_user')||'{}');if(document.getElementById('userName'))document.getElementById('userName').textContent=u.name||'-';if(document.getElementById('userRole'))document.getElementById('userRole').textContent=u.role||'-'}catch(e){}
+async function api(p){const r=await fetch(p,{credentials:'same-origin',headers:{'Accept':'application/json'}});if(r.status===401){logout();throw new Error('Session expired')}const d=await r.json();if(!r.ok)throw new Error(d.error||'API error');return d}
+function logout(){localStorage.removeItem(ADMIN_KEY);sessionStorage.removeItem('admin_user');fetch('/api/admin/logout',{method:'POST',credentials:'same-origin'}).catch(()=>{});location.href='index.html'}
+function setDate(id,daysAgo){const d=new Date();d.setDate(d.getDate()-daysAgo);document.getElementById(id).valueAsDate=d}
+function initDates(){if(!document.getElementById('fFrom').value)setDate('fFrom',30);if(!document.getElementById('fTo').value)setDate('fTo',0)}
+async function loadOptions(){
+  try{OPTS=await api('/api/admin/filter-options')}catch(e){OPTS={users:[],regions:[],depots:[]}}
+  document.getElementById('fSales').innerHTML='<option value="">Semua Sales</option>'+OPTS.users.map(u=>`<option value="${u.id}">${esc(u.name)}${u.regionName?' — '+esc(u.regionName):''}</option>`).join('');
+  document.getElementById('fRegion').innerHTML='<option value="">Semua Region</option>'+OPTS.regions.map(r=>`<option value="${r.id}">${esc(r.name)}</option>`).join('');
+  filterDepots();
+}
+function filterDepots(){
+  const regionId=document.getElementById('fRegion').value;
+  let list=OPTS.depots;if(regionId)list=list.filter(d=>String(d.regionId)===String(regionId));
+  document.getElementById('fDepot').innerHTML='<option value="">Semua Depo</option>'+list.map(d=>`<option value="${d.id}">${esc(d.name)}</option>`).join('');
+}
+function render(){
+  const tb=document.getElementById('orderBody');
+  if(!ALL_ORDERS.length){tb.innerHTML='<tr><td colspan="11" style="text-align:center;padding:20px;color:#8e8ea0">Tidak ada pesanan periode ini</td></tr>';return}
+  let total=0;let itemCount=0;
+  tb.innerHTML=ALL_ORDERS.map(o=>{total+=o.grandTotal||0;itemCount+=o.itemCount||0;const promos=o.promos?.length?o.promos.map(p=>p.nama||p).join(', '):'-';const bonus=o.bonusQty?`<span class="status-badge status-ok">🎁 +${o.bonusQty}</span>`:'';const pay=o.paymentMethod==='credit'?'Kredit':(o.paymentMethod==='cod'?'COD':'Tunai');return `<tr class="clickable-row" style="cursor:pointer" onclick="openOrderDetail('${esc(o.uuid||'')}','${esc(o.id||'')}')"><td style="font-family:monospace;font-size:12px">${esc(o.id).slice(0,14)}</td><td>${esc(o.driverName)}</td><td>${esc(o.storeName)}</td><td>${o.regionName?'<span class="status-badge status-info">'+esc(o.regionName)+'</span>':'-'}</td><td>${pay}${o.offRouteType?'<br><span style="font-size:10px;color:#856404">'+esc(o.offRouteType)+'</span>':''}</td><td>${o.itemCount}</td><td>Rp ${Number(o.grandTotal||0).toLocaleString('id-ID')}</td><td style="font-size:11px">${esc(promos)} ${bonus}</td><td><span class="status-badge ${o.status==='verified'?'status-ok':o.status==='pending'?'status-warn':'status-info'}">${esc(o.status)}</span></td><td style="font-size:12px">${o.createdAt?new Date(o.createdAt).toLocaleDateString('id-ID'):'-'}</td><td><button class="btn btn-edit" title="Ubah qty/harga order" onclick="event.stopPropagation();openEditOrder('${esc(o.uuid||'')}','${esc(o.id||'')}')">✏️ Edit</button></td></tr>`}).join('')
+    +`<tr class="total-row"><td colspan="3"><b>Total</b></td><td></td><td></td><td><b>${itemCount}</b></td><td><b>Rp ${total.toLocaleString('id-ID')}</b></td><td colspan="4"></td></tr>`;
+}
+function esc(s){return String(s||'').replace(/[&<>"']/g,function(m){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]})}
+function csvEsc(s){s=String(s||'');return (s.includes(',')||s.includes('"')||s.includes('\n'))?'"'+s.replace(/"/g,'""')+'"':s}
+function downloadCsv(){
+  if(!ALL_ORDERS.length){alert('Tidak ada data');return}
+  const head=['ID','Sales','Toko','Region','Bayar','Item','Total','Promo/Bonus','Status','Tanggal'];
+  const lines=[head.join(',')].concat(ALL_ORDERS.map(o=>{const pm=o.paymentMethod==='credit'?'Kredit':(o.paymentMethod==='cod'?'COD':'Tunai');const promos=o.promos?.length?o.promos.map(p=>p.nama||p).join('; '):'-';return [csvEsc(o.id),csvEsc(o.driverName),csvEsc(o.storeName),csvEsc(o.regionName||''),pm,o.itemCount||0,o.grandTotal||0,csvEsc(promos),csvEsc(o.status||''),o.createdAt||''].join(',')}));
+  const blob=new Blob(['\uFEFF'+lines.join('\n')],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='pesanan-periodo.csv';a.click();URL.revokeObjectURL(a.href);
+}
+function buildQuery(){
+  const p=new URLSearchParams();
+  if(document.getElementById('fFrom').value)p.set('date_from',document.getElementById('fFrom').value);
+  if(document.getElementById('fTo').value)p.set('date_to',document.getElementById('fTo').value);
+  if(document.getElementById('fSales').value)p.set('user_id',document.getElementById('fSales').value);
+  if(document.getElementById('fRegion').value)p.set('region_id',document.getElementById('fRegion').value);
+  if(document.getElementById('fDepot').value)p.set('depot_id',document.getElementById('fDepot').value);
+  return p.toString();
+}
+async function load(){
+  initDates();const qs=buildQuery();
+  try{const d=await api('/api/admin/orders?'+qs);ALL_ORDERS=d.orders||[];document.getElementById('orderLoading').style.display='none';document.getElementById('orderTable').style.display='';render()}catch(e){document.getElementById('orderLoading').textContent='Error: '+e.message}
+}
+// ── Order detail modal (Kupon Pesanan-style) ──
+let lastOrderUuid='';
+async function openOrderDetail(uuid,id){
+  if(!uuid){showOrderError('UUID tidak tersedia untuk pesanan ini');return;}
+  lastOrderUuid=uuid;
+  const modal=document.getElementById('orderModal');
+  const loading=document.getElementById('invLoading');
+  const sheet=document.getElementById('invSheet');
+  modal.style.display='flex';loading.style.display='';sheet.style.display='none';
+  loading.textContent='Memuat detail pesanan <'+esc(id)+'>...';
+  try{
+    const d=await api('/api/admin/orders/detail?uuid='+encodeURIComponent(uuid));
+    loading.style.display='none';
+    sheet.innerHTML=renderInvoice(d);
+    sheet.style.display='';
+  }catch(e){loading.textContent='Gagal memuat detail: '+e.message;loadOptions();}
+}
+function closeOrderModal(){document.getElementById('orderModal').style.display='none'}
+function showOrderError(m){const mo=document.getElementById('orderModal');mo.style.display='flex';document.getElementById('invLoading').style.display='';document.getElementById('invLoading').textContent=m;}
+function orderPrint(){const sh=document.getElementById('invSheet');if(!sh.style.display||sh.style.display==='none')return;const w=window.open('','','width=820,height=900');if(!w){window.print();return;}w.document.write('<html><head><title>Kupon Pesanan</title><style>body{font-family:sans-serif;font-size:13px;color:#1a1a2e;background:#fff;margin:20px}td,th{border-bottom:1px solid #ddd;padding:8px 10px;text-align:left}table{width:100%;border-collapse:collapse}</style></head><body>'+sh.innerHTML+'</body></html>');w.document.close();w.focus();w.print();}
+function fmtRp(n){return 'Rp '+Number(n||0).toLocaleString('id-ID')}
+function fmtDate(ts){if(!ts)return '-';const d=new Date(String(ts).replace(' ','T'));if(isNaN(d.getTime()))return ts;return d.toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'})+' '+d.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'})}
+function renderInvoice(d){
+  const payMethod=d.paymentMethod==='credit'?'Kredit':(d.paymentMethod==='cod'?'COD':'Tunai');
+  const storeAddr=d.storeAddress||'';
+  const items=d.items||[];
+  let rows='';
+  if(!items.length){rows='<tr><td colspan="4" style="text-align:center;color:#8e8ea0;padding:16px">Belum ada item</td></tr>';}
+  else{
+    rows=items.map(it=>{
+      const bonus=!!it.is_bonus;const name=esc(it.name||it.sku||'');
+      const promo=it.promoName?'<br><span style="font-size:11px;color:#0a7c42">'+esc(it.promoName)+'</span>':'';
+      if(bonus)return `<tr class="bonus"><td>${name} ${promo}</td><td class="num">+${it.qty}</td><td class="num">Gratiis</td><td class="num">Rp 0</td></tr>`;
+      const lt=(it.qty||0)*(it.unitPrice||0);
+      return `<tr><td>${name}${promo}</td><td class="num">${it.qty}</td><td class="num">${fmtRp(it.unitPrice)}</td><td class="num">${fmtRp(lt)}</td></tr>`;
+    }).join('');
+  }
+  const badgeCls=(d.status==='CONFIRMED')?'inv-badge confirmed':'inv-badge';
+  const badgeTxt=(d.status==='CONFIRMED')?'CONFIRMED · UNPAID':esc(d.status||'PENDING');
+  const promoNote=(d.isConfirmation)?`Kupon ini adalah <b>kupon pesanan (order confirmation)</b> dan bukan tax invoice.<br>Status pembayaran: <b>BELUM DIBAYAR</b>. PT Wahana Inti Mas · WIM Online`:'';
+  return `<div class="inv-sheet">
+    <div class="inv-status">⚠️ Kupon Pesanan — BELUM DIBAYAR (UNPAID) · bukan tax invoice</div>
+    <div class="inv-head">
+      <div class="inv-co">
+        <div class="co-label">PT Wahana Inti Mas</div>
+        <div class="co-name">WIM Online</div>
+        <div style="font-size:11px;color:#8e8ea0">Distribution</div>
+      </div>
+      <div class="inv-title-box">
+        <h1>KUPON PESANAN</h1>
+        <span class="${badgeCls}">${badgeTxt}</span>
+      </div>
+    </div>
+    <hr class="inv-sep">
+    <div class="inv-info">
+      <div class="blk"><div class="lbl">Toko / Akun</div><div class="val">${esc(d.storeName||'-')}</div><div class="val-sub">${esc(storeAddr)}</div></div>
+      <div class="blk"><div class="lbl">Sales</div><div class="val">${esc(d.repName||'-')}</div><div class="val-sub">${d.source==='luar_rute'?'📍 Luar Rute':''}</div></div>
+    </div>
+    <div class="inv-meta">
+      <div class="om"><div class="lbl">No. Pesanan</div><div class="val">${esc(d.orderId||'-')}</div></div>
+      <div class="om"><div class="lbl">Tanggal</div><div class="val">${fmtDate(d.createdAt)}</div></div>
+      <div class="om"><div class="lbl">Item/Trx</div><div class="val">${(d.itemCount||0)} pcs</div></div>
+      <div class="om"><div class="lbl">Pembayaran</div><div class="val">${payMethod}</div></div>
+    </div>
+    <hr class="inv-sep">
+    <table class="inv-table">
+      <thead><tr><th>Produk</th><th class="num">Qty</th><th class="num">Harga</th><th class="num">Total</th></tr></thead>
+      <tbody>${rows}</tbody>
+      <tr class="total-row"><td colspan="3" style="text-align:right">Subtotal</td><td class="num">${fmtRp(d.subtotal)}</td></tr>
+      <tr class="total-row"><td colspan="3" style="text-align:right">Diskonto</td><td class="num">- ${fmtRp(d.totalDiscount||0)}</td></tr>
+      <tr class="total-row"><td colspan="3" style="text-align:right;font-weight:800">GRAND TOTAL</td><td class="num" style="font-weight:800;font-size:15px">${fmtRp(d.grandTotal)}</td></tr>
+    </table>
+    <div style="margin-top:16px;font-size:11px;color:#8e8ea0;text-align:center;line-height:1.6">${promoNote}</div>
+  </div>`;
+}
+let editUuid='';
+function openEditOrder(uuid,id){
+  if(!uuid){alert('UUID tidak tersedia untuk pesanan ini');return;}
+  editUuid=uuid;
+  const modal=document.getElementById('editModal');
+  const loading=document.getElementById('editLoading');
+  const sheet=document.getElementById('editSheet');
+  modal.style.display='flex';loading.style.display='';sheet.style.display='none';
+  loading.textContent='Memuat items untuk <'+esc(id)+'>...';
+  api('/api/admin/orders/detail?uuid='+encodeURIComponent(uuid)).then(function(d){
+    loading.style.display='none';
+    sheet.innerHTML=renderEditSheet(d.items||[]);
+    sheet.style.display='';
+  }).catch(function(e){loading.textContent='Gagal memuat items: '+e.message;});
+}
+function closeEditModal(){document.getElementById('editModal').style.display='none';editUuid='';}
+function renderEditSheet(items){
+  if(!items || !items.length){return '<div class="edit-note">Belum ada item pada pesanan ini.</div>';}
+  const rows=items.map(function(it,i){
+    const sku=esc(it.sku||''),name=esc(it.name||it.sku||'produk');
+    const bonus=!!it.is_bonus;
+    if(bonus){
+      return '<tr class="edit-row-msg"><td colspan="2">'+name+' <span class="status-badge status-ok">🎁 BONUS</span>'+(it.promoName?' <span style="font-size:11px;color:#0a7c42">'+esc(it.promoName)+'</span>':'')+'</td><td class="num">+'+esc(it.qty)+'</td><td class="num" colspan="2"><i>Gratiis (tidak bisa diubah)</i></td></tr>';
+    }
+    return '<tr class="edit-row" data-sku="'+sku+'" data-name="'+name+'">'
+      +'<td>'+name+(sku?'<br><span style="font-size:10px;color:#8e8ea0">'+sku+'</span>':'')+'</td>'
+      +'<td>'+esc(it.qty)+'</td>'
+      +'<td><input type="number" min="0" step="any" class="edit-qty" style="width:80px;padding:6px;border:1.5px solid #e0e0e8;border-radius:8px" value="'+esc(it.qty)+'"></td>'
+      +'<td><input type="number" min="0" step="any" class="edit-price" style="width:110px;padding:6px;border:1.5px solid #e0e0e8;border-radius:8px" value="'+esc(it.unitPrice)+'"></td>'
+      +'<td style="font-size:11px;color:#856404"><i>ubah</i></td>'
+      +'</tr>';
+  }).join('');
+  return '<div class="edit-note">Ubah <b>Qty Baru</b> dan <b>Harga Satuan</b> untuk item (non-bonus). Total order dihitung ulang otomatis. Baris bonus hanya tampil (read-only).</div>'
+    +'<table class="inv-table"><thead><tr><th>Produk (SKU)</th><th class="num">Qty Lama</th><th class="num">Qty Baru</th><th class="num">Harga Satuan</th><th></th></tr></thead><tbody>'+rows+'</tbody></table>';
+}
+function saveEditOrder(){
+  if(!editUuid){return;}
+  const rows=document.querySelectorAll('#editSheet .edit-row');
+  const items=[];
+  rows.forEach(function(r){
+    const qty=parseFloat(r.querySelector('.edit-qty').value);
+    const price=parseFloat(r.querySelector('.edit-price').value);
+    items.push({sku:r.getAttribute('data-sku'),name:r.getAttribute('data-name'),qty:isNaN(qty)?0:qty,unitPrice:isNaN(price)?0:price});
+  });
+  if(!items.length){alert('Tidak ada item non-bonus yang bisa diubah');return;}
+  const body=JSON.stringify({order_uuid:editUuid,items:items});
+  fetch('/api/admin/orders/admin-edit',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','Accept':'application/json'},body:body})
+    .then(function(r){if(r.status===401){logout();throw new Error('Session expired')}return r.json();})
+    .then(function(d){
+      if(d.error){alert('Gagal menyimpan: '+d.error);return;}
+      alert('Order berhasil diubah. Total baru: Rp '+Number(d.grandTotal||0).toLocaleString('id-ID'));
+      closeEditModal();
+      load();
+    })
+    .catch(function(e){alert('Gagal menyimpan: '+e.message);});
+}
+initDates();loadOptions();load();
+
+document.querySelectorAll('.rencana-drop').forEach(function(dd){var menu=dd.querySelector('span[style*="position:absolute"]');if(!menu)return;dd.addEventListener('mouseenter',function(){menu.style.display='block'});dd.addEventListener('mouseleave',function(){menu.style.display='none'});});
+</script>
+<div id="appFooter"></div>
+<script src="js/include.js"></script>
+</body>
+</html>

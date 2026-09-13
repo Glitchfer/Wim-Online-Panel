@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WIM Admin — Laporan</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f0f2f5;color:#1a1a2e;font-size:14px}
+.container{max-width:1200px;margin:0 auto;padding:24px}
+.page-title{font-size:20px;font-weight:700;margin-bottom:6px}
+.page-title .sub{font-size:13px;color:#8e8ea0;font-weight:400;display:block;margin-top:4px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;margin-top:24px}
+.card{background:#fff;border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,.04);overflow:hidden;transition:all .15s}
+a.card{text-decoration:none;color:inherit;display:block}
+a.card:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(0,0,0,.1)}
+.card .icon{font-size:28px;padding:20px 20px 6px}
+.card h3{font-size:15px;font-weight:700;padding:0 20px 4px}
+.card p{font-size:12px;color:#8e8ea0;padding:0 20px 18px;line-height:1.45}
+.card .corner{width:6px;height:100%;position:absolute;left:0;top:0}
+.card{position:relative}
+.card.ready .corner{background:#0a7c42}
+.card.soon .corner{background:#c9ccd6}
+.card .soon-tag{display:inline-block;margin:18px 0 0 20px;padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;background:#eef0f4;color:#8e8ea0}
+.back{display:inline-block;margin-bottom:18px;color:#4361ee;font-size:13px;text-decoration:none;font-weight:600}
+</style>
+</head>
+<body data-page="laporan">
+<div id="appHeader"></div>
+<div class="container">
+  <div class="page-title">🗂️ Laporan <span class="sub">Menu laporan rekapitulasi dan batch cetak WIM Online</span></div>
+  <div class="grid">
+    <a class="card ready" href="packing.html">
+      <div class="corner"></div>
+      <div class="icon">🚚</div>
+      <h3>Packing List</h3>
+      <p>Rekap SKU per pesanan untuk persiapan pengiriman, lengkap dengan filter tanggal dan ekspor CSV.</p>
+    </a>
+    <a class="card soon" href="javascript:void(0)">
+      <div class="corner"></div>
+      <div class="soon-tag">Segera</div>
+      <div class="icon">🧾</div>
+      <h3>Cetak Surat Jalan</h3>
+      <p>Generate surat jalan batch per pesanan. Segera hadir.</p>
+    </a>
+    <a class="card soon" href="javascript:void(0)">
+      <div class="corner"></div>
+      <div class="soon-tag">Segera</div>
+      <div class="icon">📑</div>
+      <h3>Cetak Invoice Batch</h3>
+      <p>Cetak / unduh invoice dalam jumlah banyak. Segera hadir.</p>
+    </a>
+  </div>
+</div>
+<script>
+try{const u=JSON.parse(sessionStorage.getItem('admin_user')||'{}');if(typeof document!=='undefined'&&document.getElementById('userName'))document.getElementById('userName').textContent=u.name||'-';if(typeof document!=='undefined'&&document.getElementById('userRole'))document.getElementById('userRole').textContent=u.role||'-'}catch(e){}
+</script>
+<div id="appFooter"></div>
+<script src="js/include.js"></script>
+</body>
+</html>

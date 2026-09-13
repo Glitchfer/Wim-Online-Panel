@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WIM Admin — Analitik & Laporan</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f0f2f5;color:#1a1a2e;font-size:14px}
+.topnav{background:#1a1a2e;color:#fff;padding:0 24px;display:flex;align-items:center;height:56px;position:sticky;top:0;z-index:100}
+.topnav .brand{font-weight:700;font-size:16px;margin-right:32px}.topnav .brand span{color:#8e8ea0;font-weight:400}
+.topnav nav{display:flex;gap:4px;flex:1;overflow-x:auto}
+.topnav nav a{color:#b0b0c8;text-decoration:none;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:500;transition:all .15s;white-space:nowrap}
+.topnav nav a:hover{color:#fff;background:rgba(255,255,255,.08)}
+.topnav nav a.active{color:#fff;background:#4361ee}
+.topnav .user-info{font-size:12px;color:#8e8ea0;display:flex;align-items:center;gap:8px}
+.topnav .user-info .role-badge{background:#4361ee;padding:2px 8px;border-radius:6px;font-size:11px;color:#fff}
+.topnav .logout{color:#e63946;cursor:pointer;font-size:12px;margin-left:12px;text-decoration:none}
+.container{max-width:1400px;margin:0 auto;padding:24px}
+.page-title{font-size:20px;font-weight:700;margin-bottom:20px}
+.page-title .sub{font-size:13px;color:#8e8ea0;font-weight:400}
+.filters{display:flex;gap:10px;margin-bottom:16px;align-items:center;flex-wrap:wrap;background:#fff;padding:12px 16px;border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,.04)}
+.filters label{font-size:12px;font-weight:600;color:#6c6c80;white-space:nowrap}
+.filters input,.filters select{padding:7px 10px;border:1.5px solid #e0e0e8;border-radius:8px;font-size:13px;background:#fff}
+.filters input:focus,.filters select:focus{outline:none;border-color:#4361ee}
+.filters .sep{width:1px;height:26px;background:#e0e0e8}
+.csv-btn{padding:8px 16px;border:none;border-radius:8px;background:#0a7c42;color:#fff;font-size:13px;font-weight:600;cursor:pointer}
+.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}
+.tab{padding:9px 18px;border-radius:9px;border:1.5px solid #e0e0e8;background:#fff;color:#6c6c80;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s}
+.tab:hover{border-color:#4361ee;color:#4361ee}
+.tab.active{background:#4361ee;border-color:#4361ee;color:#fff}
+.card{background:#fff;border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,.04);overflow:hidden}
+.card-body{overflow-x:auto;padding:8px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{padding:10px 14px;text-align:left;font-weight:600;color:#6c6c80;font-size:11px;text-transform:uppercase;letter-spacing:.5px;background:#fafbfc;border-bottom:1px solid #eef0f4}
+td{padding:10px 14px;border-bottom:1px solid #f0f2f5}
+tr:hover td{background:#f8f9fc}
+.status-badge{display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600}
+.status-ok{background:#d4f5e2;color:#0a7c42}
+.status-warn{background:#fff3cd;color:#856404}
+.status-info{background:#e8f0fe;color:#4361ee}
+.loading{text-align:center;padding:40px;color:#8e8ea0}
+.summary-ec{border-radius:12px;padding:16px 20px;margin-bottom:16px;background:linear-gradient(135deg,#4361ee,#5a8cff);color:#fff;display:none;flex-wrap:wrap;gap:32px;align-items:center}
+.summary-ec .box{display:flex;flex-direction:column}
+.summary-ec .val{font-size:26px;font-weight:800}
+.summary-ec .lbl{font-size:12px;opacity:.85}
+.gal-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;padding:12px}
+.gal-item{background:#fafbfc;border:1px solid #eef0f4;border-radius:10px;overflow:hidden}
+.gal-item img{width:100%;height:130px;object-fit:cover;display:block}
+.gal-item .cap{padding:6px 8px;font-size:11px;color:#6c6c80}
+.empty-state{text-align:center;padding:40px;color:#8e8ea0}
+</style>
+</head>
+<body data-page="analytics">
+<div id="appHeader"></div>
+<div class="container">
+  <div class="page-title">📈 Analitik & Laporan <span class="sub">Rekap kunjungan, order vs stok, packing list, performa sales</span></div>
+  <div class="filters">
+    <label>Dari</label><input type="date" id="fFrom" onchange="load()">
+    <label>Sampai</label><input type="date" id="fTo" onchange="load()">
+    <span class="sep"></span>
+    <label>Sales</label>
+    <select id="fSales" onchange="load()"><option value="">Semua Sales</option></select>
+    <label>Region</label>
+    <select id="fRegion" onchange="filterDepots();load()"><option value="">Semua Region</option></select>
+    <label>Depo</label>
+    <select id="fDepot" onchange="load()"><option value="">Semua Depo</option></select>
+    <button class="csv-btn" onclick="downloadCsv()">⬇ CSV</button>
+  </div>
+  <div class="tabs" id="tabs">
+    <div class="tab active" data-tab="rekap" onclick="setTab('rekap')">Rekap Harian</div>
+    <div class="tab" data-tab="performance" onclick="setTab('performance')">Performa Sales-Depo</div>
+    <div class="tab" data-tab="orders" onclick="setTab('orders')">Pesanan</div>
+    <div class="tab" data-tab="orderstock" onclick="setTab('orderstock')">Order vs Stok</div>
+    <div class="tab" data-tab="gallery" onclick="setTab('gallery')">Galeri Foto</div>
+    <div class="tab" data-tab="storeorders" onclick="setTab('storeorders')">Order per Toko</div>
+  </div>
+
+  <div class="summary-ec" id="ecSummary">
+    <div class="box"><span class="val" id="ecVal">0%</span><span class="lbl">EC (Effective Call)</span></div>
+    <div class="box"><span class="val" id="ecKun">0</span><span class="lbl">Kunjungan</span></div>
+    <div class="box"><span class="val" id="ecPes">0</span><span class="lbl">Pesanan</span></div>
+    <div class="box"><span class="val" id="ecNo">0</span><span class="lbl">Tanpa Pesanan</span></div>
+  </div>
+
+  <div class="card">
+    <div class="loading" id="loading">Memuat...</div>
+    <div class="card-body" id="tableWrap" style="display:none">
+      <table id="resultTable" style="display:none">
+        <thead id="tableHead"></thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+      <div id="galleryWrap" style="display:none"><div class="gal-grid" id="galleryGrid"></div></div>
+      <div class="empty-state" id="emptyState" style="display:none">Tidak ada data untuk filter ini</div>
+    </div>
+  </div>
+</div>
+<script>
+const ADMIN_KEY='wim_admin_token';
+let OPTS={users:[],regions:[],depots:[]};
+let TAB='rekap';
+let ROWS=[];
+const HEADERS={
+  'rekap':['Sales','Kunjungan','Pesanan','Tanpa Order','EC%','Depo','Region'],
+  'performance':['Depo','Region','Sales','Kunjungan','Pesanan','Omset','EC%'],
+  'orders':['No. Pesanan','Toko','Sales','Status','Total','Tanggal'],
+  'orderstock':['SKU','Produk','Qty Pesan','Stok Terakhir','Depo'],
+  'gallery':['Sales','Toko','Check-in','Jumlah Foto','Foto'],
+  'storeorders':['No. Pesanan','Toko','Sales','Status','Total','Tanggal']
+};
+const SRCMAP={
+  'rekap':'/api/admin/analytics/recap','performance':'/api/admin/analytics/sales-performance',
+  'orders':'/api/admin/orders',
+  'orderstock':'/api/admin/analytics/order-stock','gallery':'/api/admin/analytics/gallery',
+  'storeorders':'/api/admin/analytics/store-orders'
+};
+try{const u=JSON.parse(sessionStorage.getItem('admin_user')||'{}');if(document.getElementById('userName'))document.getElementById('userName').textContent=u.name||'-';if(document.getElementById('userRole'))document.getElementById('userRole').textContent=u.role||'-'}catch(e){}
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(m){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]})}
+function num(v){return (v==null||v==='')?0:Number(v)}
+function rp(v){return 'Rp '+(num(v).toLocaleString('id-ID'))}
+function ecBadge(p){const e=num(p);const cls=e>=60?'status-ok':e>=30?'status-warn':'status-info';return '<span class="status-badge '+cls+'">'+e+'%</span>'}
+async function api(p){const r=await fetch(p,{credentials:'same-origin',headers:{'Accept':'application/json'}});if(r.status===401){logout();throw new Error('Session expired')}const d=await r.json();if(!r.ok)throw new Error(d.error||'API error');return d}
+function logout(){localStorage.removeItem(ADMIN_KEY);sessionStorage.removeItem('admin_user');fetch('/api/admin/logout',{method:'POST',credentials:'same-origin'}).catch(()=>{});location.href='index.html'}
+function setDate(id,daysAgo){const d=new Date();d.setDate(d.getDate()-daysAgo);document.getElementById(id).valueAsDate=d}
+function initDates(){if(!document.getElementById('fFrom').value)setDate('fFrom',30);if(!document.getElementById('fTo').value)setDate('fTo',0)}
+async function loadFilters(){
+  try{OPTS=await api('/api/admin/filter-options')}catch(e){OPTS={users:[],regions:[],depots:[]}}
+  document.getElementById('fSales').innerHTML='<option value="">Semua Sales</option>'+OPTS.users.map(u=>'<option value="'+u.id+'">'+esc(u.name)+(u.regionName?' — '+esc(u.regionName):'')+'</option>').join('');
+  document.getElementById('fRegion').innerHTML='<option value="">Semua Region</option>'+OPTS.regions.map(r=>'<option value="'+r.id+'">'+esc(r.name)+'</option>').join('');
+  filterDepots();
+}
+function filterDepots(){
+  const regionId=document.getElementById('fRegion').value;
+  let list=OPTS.depots;if(regionId)list=list.filter(d=>String(d.regionId)===String(regionId));
+  document.getElementById('fDepot').innerHTML='<option value="">Semua Depo</option>'+list.map(d=>'<option value="'+d.id+'">'+esc(d.name)+'</option>').join('');
+}
+function setTab(t){
+  TAB=t;
+  document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x.getAttribute('data-tab')===t));
+  document.getElementById('ecSummary').style.display=(t==='rekap')?'flex':'none';
+  load();
+}
+function buildQuery(){
+  const from=document.getElementById('fFrom').value,to=document.getElementById('fTo').value;
+  const sales=document.getElementById('fSales').value,region=document.getElementById('fRegion').value,depot=document.getElementById('fDepot').value;
+  const p=new URLSearchParams();
+  if(from)p.set('date_from',from);if(to)p.set('date_to',to);
+  if(sales)p.set('user_id',sales);if(region)p.set('region_id',region);if(depot)p.set('depot_id',depot);
+  return p.toString();
+}
+function fmtDate(v){if(!v)return '-';const d=new Date(v);return isNaN(d.getTime())?String(v):d.toLocaleString('id-ID',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}
+function badgeStatus(s){s=String(s||'').toLowerCase();const cls=(s==='shipped'||s==='delivered'||s==='packed')?'status-ok':'status-warn';return '<span class="status-badge '+cls+'">'+esc(s||'-')+'</span>'}
+async function load(){
+  const qs=buildQuery();
+  document.getElementById('loading').style.display='block';
+  document.getElementById('tableWrap').style.display='none';
+  document.getElementById('emptyState').style.display='none';
+  try{
+    const d=await api((SRCMAP[TAB]||'/api/admin/analytics/recap')+'?'+qs);
+    const raw=d.rows||d.orders||d.records||d.data||[];
+    ROWS=Array.isArray(raw)?raw:[];
+    document.getElementById('loading').style.display='none';
+    if(!ROWS.length){document.getElementById('tableWrap').style.display='block';document.getElementById('emptyState').style.display='block';return}
+    document.getElementById('tableWrap').style.display='block';
+    if(TAB==='gallery')renderGallery();
+    else renderTable();
+    if(TAB==='rekap')renderEC();
+  }catch(e){document.getElementById('loading').textContent='Error: '+e.message}
+}
+function renderEC(){
+  const kun=ROWS.reduce((s,r)=>s+num(r.kunjungan),0),pes=ROWS.reduce((s,r)=>s+num(r.pesanan),0);
+  document.getElementById('ecKun').textContent=kun;
+  document.getElementById('ecPes').textContent=pes;
+  document.getElementById('ecNo').textContent=ROWS.reduce((s,r)=>s+num(r.noOrder),0);
+  document.getElementById('ecVal').textContent=(kun?Math.round(100*pes/kun):0)+'%';
+}
+function rowHtml(r){
+  switch(TAB){
+    case 'rekap':return '<td><b>'+esc(r.rep)+'</b></td><td>'+num(r.kunjungan)+'</td><td>'+num(r.pesanan)+'</td><td>'+num(r.noOrder)+'</td><td>'+ecBadge(r.ecPct)+'</td><td>'+esc(r.depotName||'-')+'</td><td><span class="status-badge status-info">'+esc(r.regionName||'-')+'</span></td>';
+    case 'performance':return '<td>'+esc(r.depotName||'-')+'</td><td>'+esc(r.regionName||'-')+'</td><td><b>'+esc(r.rep)+'</b></td><td>'+num(r.kunjungan)+'</td><td>'+num(r.pesanan)+'</td><td>'+rp(r.omset)+'</td><td>'+ecBadge(r.ecPct)+'</td>';
+    case 'orders':return '<td>'+esc(r.orderRef||r.id||'')+'</td><td>'+esc(r.storeName)+'</td><td>'+esc(r.driverName)+'</td><td>'+badgeStatus(r.status)+'</td><td>'+rp(r.grandTotal)+'</td><td>'+fmtDate(r.createdAt)+'</td>';
+    case 'orderstock':return '<td>'+esc(r.sku||'-')+'</td><td>'+esc(r.productName)+'</td><td>'+num(r.qtyOrder)+'</td><td>'+num(r.stockResult)+'</td><td>'+esc(r.depotName||'-')+'</td>';
+    case 'storeorders':return '<td>'+esc(r.orderRef||r.uuid||'')+'</td><td>'+esc(r.storeName)+'</td><td>'+esc(r.rep)+'</td><td>'+badgeStatus(r.status)+'</td><td>'+rp(r.total)+'</td><td>'+fmtDate(r.createdAt)+'</td>';
+    default:return '';
+  }
+}
+function renderTable(){
+  document.getElementById('tableHead').innerHTML='<tr>'+(HEADERS[TAB]||[]).map(h=>'<th>'+h+'</th>').join('')+'</tr>';
+  document.getElementById('tableBody').innerHTML=ROWS.map(r=>'<tr>'+rowHtml(r)+'</tr>').join('');
+  document.getElementById('resultTable').style.display='';
+  document.getElementById('galleryWrap').style.display='none';
+}
+function renderGallery(){
+  document.getElementById('resultTable').style.display='none';
+  document.getElementById('galleryWrap').style.display='block';
+  let html='';
+  ROWS.forEach(r=>{
+    const imgs=((r.photos&&r.photos.length)?r.photos:(r.selfie?[r.selfie]:[])).filter(p=>p);
+    html+='<div class="gal-item">'+(
+      imgs.length? imgs.map(p=>'<img src="'+p+'" alt="foto">').join('')
+      :'<div style="height:130px;display:flex;align-items:center;justify-content:center;color:#bbb">No foto</div>'
+    )+'<div class="cap">'+esc(r.rep)+' — '+esc(r.storeName)+'</div></div>';
+  });
+  document.getElementById('galleryGrid').innerHTML=html||'<div class="empty-state">Tidak ada foto</div>';
+}
+function csvEsc(s){s=String(s==null?'':s);return (s.indexOf(',')>=0||s.indexOf('"')>=0||s.indexOf('\n')>=0)?'"'+s.replace(/"/g,'""')+'"':s}
+function csvVal(v){return (v===null||v===undefined)?'':v}
+function downloadCsv(){
+  if(!ROWS.length){alert('Tidak ada data');return}
+  const lines=[(HEADERS[TAB]||[]).join(',')];
+  ROWS.forEach(r=>{
+    let row=[];
+    if(TAB==='rekap')row=[r.rep,r.kunjungan,r.pesanan,r.noOrder,r.ecPct,r.depotName,r.regionName];
+    else if(TAB==='performance')row=[r.depotName,r.regionName,r.rep,r.kunjungan,r.pesanan,r.omset,r.ecPct];
+    else if(TAB==='orders')row=[r.orderRef||r.id,r.storeName,r.driverName,r.status,r.grandTotal,r.createdAt];
+    else if(TAB==='orderstock')row=[r.sku,r.productName,r.qtyOrder,r.stockResult,r.depotName];
+    else if(TAB==='gallery')row=[r.rep,r.storeName,r.checkinAt,r.photoCount,''];  // 5 cols: Sales,Toko,Check-in,Jml Foto,Foto
+    else if(TAB==='storeorders')row=[r.orderRef||r.uuid,r.storeName,r.rep,r.status,r.total,r.createdAt];
+    lines.push(row.map(csvEsc).join(','));
+  });
+  const blob=new Blob(['\uFEFF'+lines.join('\n')],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=TAB+'-report.csv';a.click();URL.revokeObjectURL(a.href);
+}
+function init(){initDates();loadFilters();load()}
+init();
+</script>
+<div id="appFooter"></div>
+<script src="js/include.js"></script>
+</body>
+</html>

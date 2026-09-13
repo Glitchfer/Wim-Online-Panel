@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WIM Admin — Promo</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f0f2f5;color:#1a1a2e;font-size:14px}
+.topnav{background:#1a1a2e;color:#fff;padding:0 24px;display:flex;align-items:center;height:56px;position:sticky;top:0;z-index:100}
+.topnav .brand{font-weight:700;font-size:16px;margin-right:32px}.topnav .brand span{color:#8e8ea0;font-weight:400}
+.topnav nav{display:flex;gap:4px;flex:1;overflow-x:auto}
+.topnav nav a{color:#b0b0c8;text-decoration:none;padding:8px 14px;border-radius:8px;font-size:13px;font-weight:500;transition:all .15s;white-space:nowrap}
+.topnav nav a:hover{color:#fff;background:rgba(255,255,255,.08)}
+.topnav nav a.active{color:#fff;background:#4361ee}
+.topnav .user-info{font-size:12px;color:#8e8ea0;display:flex;align-items:center;gap:8px;white-space:nowrap}
+.topnav .user-info .role-badge{background:#4361ee;padding:2px 8px;border-radius:6px;font-size:11px;color:#fff}
+.topnav .logout{color:#e63946;cursor:pointer;font-size:12px;margin-left:12px;text-decoration:none}
+.container{max-width:1400px;margin:0 auto;padding:24px}
+.page-title{font-size:20px;font-weight:700;margin-bottom:20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.page-title .sub{font-size:13px;color:#8e8ea0;font-weight:400}
+.card{background:#fff;border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,.04);overflow:hidden}
+.card-header{padding:16px 20px;border-bottom:1px solid #f0f2f5;display:flex;justify-content:space-between;align-items:center}
+.card-header h3{font-size:15px;font-weight:600}
+.card-body{padding:0;overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{padding:10px 14px;text-align:left;font-weight:600;color:#6c6c80;font-size:11px;text-transform:uppercase;letter-spacing:.5px;background:#fafbfc;border-bottom:1px solid #eef0f4}
+td{padding:10px 14px;border-bottom:1px solid #f0f2f5;vertical-align:top}
+tr:hover td{background:#f8f9fc}
+.status-badge{display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600}
+.status-ok{background:#d4f5e2;color:#0a7c42}
+.status-warn{background:#fff3cd;color:#856404}
+.status-miss{background:#fde8e8;color:#c0392b}
+.status-info{background:#e8f0fe;color:#4361ee}
+.btn{display:inline-flex;align-items:center;gap:4px;padding:8px 14px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;text-decoration:none}
+.btn-primary{background:#4361ee;color:#fff}
+.btn-success{background:#0a7c42;color:#fff}
+.btn-danger{background:#e63946;color:#fff}
+.btn-outline{background:transparent;color:#4361ee;border:1px solid #d0d5dd}
+.btn-sm{padding:5px 10px;font-size:12px}
+.inline-form{display:none;padding:16px 20px;background:#f8f9fc;border:1px solid #eef0f4;border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,.04);margin-bottom:14px}
+.inline-form.open{display:block}
+.form-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-bottom:12px}
+.form-field{display:flex;flex-direction:column;gap:4px}
+.form-field label{font-size:11px;font-weight:600;color:#6c6c80;text-transform:uppercase;letter-spacing:.3px}
+.form-field input,.form-field select{padding:7px 10px;border:1px solid #d0d5dd;border-radius:6px;font-size:13px;color:#1a1a2e;background:#fff}
+.form-section{border:1px solid #e2e6ee;border-radius:10px;padding:12px 14px;margin-bottom:12px;background:#fff}
+.form-section h4{font-size:13px;font-weight:600;color:#1a1a2e;margin-bottom:8px}
+.form-section .desc{font-size:12px;color:#8e8ea0;margin-bottom:8px}
+.form-actions{display:flex;gap:8px;justify-content:flex-end;align-items:center}
+.loading{text-align:center;padding:40px;color:#8e8ea0}
+.error-bar{background:#fde8e8;color:#c0392b;padding:12px 20px;border-radius:8px;margin-bottom:16px;font-size:13px;display:none}
+.note-bar{background:#fff7e0;color:#7a5c00;padding:10px 14px;border-radius:8px;margin-bottom:12px;font-size:13px;display:flex;gap:8px;align-items:center}
+.toast{position:fixed;top:20px;right:20px;padding:12px 20px;border-radius:8px;font-size:13px;font-weight:500;z-index:999;display:none;box-shadow:0 4px 12px rgba(0,0,0,.12);animation:fadeIn .25s ease}
+.toast-success{background:#d4f5e2;color:#0a7c42}
+.toast-error{background:#fde8e8;color:#c0392b}
+@keyframes fadeIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+/* Pill group for promo type */
+.pill-group{display:inline-flex;border:1px solid #d0d5dd;border-radius:8px;overflow:hidden;background:#fff}
+.pill-group label{padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;color:#6c6c80;border-right:1px solid #d0d5dd;user-select:none}
+.pill-group label:last-child{border-right:none}
+.pill-group input{display:none}
+.pill-group input:checked+label{background:#4361ee;color:#fff}
+/* Requirement row */
+.req-row{display:flex;gap:8px;align-items:flex-end;margin-bottom:8px}
+.req-row .form-field{flex:1}
+.add-req-btn{margin-top:2px}
+.req-remove{background:transparent;border:none;color:#e63946;font-size:18px;cursor:pointer;line-height:1;padding:6px 8px}
+.toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:#fff;padding:10px 14px;border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,.04);margin-bottom:12px}
+.toolbar label{font-size:12px;font-weight:600;color:#6c6c80;margin-left:4px}
+.toolbar input,.toolbar select{padding:6px 10px;border:1px solid #d0d5dd;border-radius:6px;font-size:13px;background:#fff}
+.toolbar .spacer{flex:1}
+</style>
+</head>
+<body data-page="promos">
+<div id="appHeader"></div>
+<div class="container">
+  <div class="error-bar" id="errorBar"></div>
+  <div class="toast" id="toast"></div>
+  <div class="page-title">🎁 Manajemen Promo
+    <span class="sub" id="promoCount"></span>
+    <button class="btn btn-success" onclick="toggleForm()" id="addBtn" style="margin-left:auto">＋ Tambah Promo</button>
+  </div>
+
+  <!-- ===== GRAPHICAL BUILDER FORM ===== -->
+  <div class="inline-form" id="addForm">
+    <div class="form-section">
+      <h4>1. Info Dasar</h4>
+      <div class="form-row">
+        <div class="form-field"><label>Nama Promo *</label><input type="text" id="fName" placeholder="Cth: Bundling 10 Gratis 2"></div>
+        <div class="form-field"><label>Area berlaku *</label>
+          <div style="margin-top:2px"><label style="font-size:12px;font-weight:600;cursor:pointer"><input type="checkbox" id="fAllAreas" onchange="toggleAllAreasPromo()"> ⚡ Semua Area</label></div>
+          <div id="fAreaGroup" style="display:flex;flex-wrap:wrap;gap:6px;max-height:120px;overflow:auto;border:1px solid #d0d5dd;border-radius:8px;padding:6px">
+          </div>
+        </div>
+        <div class="form-field"><label>Status</label>
+          <select id="fStatus"><option value="active">Active</option><option value="inactive">Inactive</option></select>
+        </div>
+        <div class="form-field"><label>Priority</label><input type="number" id="fPriority" value="0" min="0"></div>
+        <div class="form-field"><label>Stackable (multi)</label>
+          <select id="fStack"><option value="false">No</option><option value="true">Yes</option></select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-field"><label>Periode Start (opsional)</label><input type="date" id="fStart"></div>
+        <div class="form-field"><label>Periode End (opsional)</label><input type="date" id="fEnd"></div>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <h4>2. Tipe Promo</h4>
+      <div class="pill-group">
+        <input type="radio" name="fType" id="typeBundling" value="bundling" checked><label for="typeBundling" onclick="setType('bundling')">Bundling (Bonus)</label>
+        <input type="radio" name="fType" id="typeDiskon" value="diskon"><label for="typeDiskon" onclick="setType('diskon')">Discount (IDR)</label>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <h4>3. Requirements (Syarat)</h4>
+      <div class="desc" id="reqDesc">Bundling: setiap baris = beli <b>Qty</b> dari SKU tsb. Beberapa baris = salah satu terpenuhi (atau).</div>
+      <div id="reqList"></div>
+      <button class="btn btn-outline btn-sm add-req-btn" onclick="addReqRow()">＋ Tambah syarat</button>
+    </div>
+
+    <div class="form-section">
+      <h4>4. Reward</h4>
+      <div id="rewardBundling">
+        <div class="form-row">
+          <div class="form-field"><label>Bonus SKU *</label><select id="fBonusSku"><option value="">— Pilih SKU —</option></select></div>
+          <div class="form-field"><label>Bonus Qty *</label><input type="number" id="fBonusQty" value="1" min="1"></div>
+        </div>
+      </div>
+      <div id="rewardDiskon" style="display:none">
+        <div class="form-row">
+          <div class="form-field"><label>Jumlah Potongan (Rp) *</label><input type="number" id="fDiscAmount" value="0" min="0" step="100"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <h4>5. Redeem Limit</h4>
+      <div class="desc">Atur batas penukaran. Centang <b>unlimited</b> = tanpa batas.</div>
+      <div class="form-row">
+        <div class="form-field" style="flex:1">
+          <label style="font-weight:600;cursor:pointer"><input type="checkbox" id="fRedeemPerOrderUnl" checked onchange="toggleRedeemInputs()"> Per-order: unlimited</label>
+          <div style="margin-top:6px"><label>Redeems per pesanan</label>
+            <input type="number" id="fRedeemPerOrder" value="1" min="0" disabled>
+          </div>
+        </div>
+        <div class="form-field" style="flex:1">
+          <label style="font-weight:600;cursor:pointer"><input type="checkbox" id="fRedeemLifetimeUnl" checked onchange="toggleRedeemInputs()"> Lifetime: unlimited</label>
+          <div style="margin-top:6px"><label>Redeems total (semua pesanan)</label>
+            <input type="number" id="fRedeemLifetime" value="1" min="0" disabled>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="note-bar" id="legacyNote" style="display:none">⚠️ Promo ini memakai jenis/struktur lama dan tidak dapat dipetakan bersih. Silakan pilih tipe dan susun ulang requirements/reward di bawah.</div>
+
+    <div class="form-actions">
+      <span id="editUuid" style="display:none"></span>
+      <span style="font-size:12px;color:#8e8ea0;flex:1;text-align:left">Pastikan region &amp; syarat terisi sebelum menyimpan.</span>
+      <button class="btn btn-outline" onclick="toggleForm()">Batal</button>
+      <button class="btn btn-primary" onclick="savePromo()">💾 Simpan Promo</button>
+    </div>
+  </div>
+
+  <!-- ===== TOOLBAR / FILTERS ===== -->
+  <div class="toolbar">
+    <label>Cari</label><input type="text" id="searchQ" placeholder="Nama / ref..." oninput="render()">
+    <label>Region</label><select id="filterRegion" onchange="render()"><option value="">Semua Region</option></select>
+    <label>Jenis</label><select id="filterType" onchange="render()">
+      <option value="">All</option><option value="bundling">Bundling</option><option value="bonus">Bonus</option><option value="strata">Strata</option><option value="diskon">Diskon</option>
+    </select>
+    <label>Status</label><select id="filterStatus" onchange="render()">
+      <option value="">All</option><option value="active">Active</option><option value="inactive">Inactive</option>
+    </select>
+    <label>Urutkan</label><select id="sortSel" onchange="render()">
+      <option value="">Default (priority)</option><option value="nama">Nama</option><option value="status">Status</option>
+    </select>
+  </div>
+
+  <!-- ===== LIST ===== -->
+  <div class="card">
+    <div class="card-header"><h3>🎁 Daftar Promo</h3></div>
+    <div class="card-body">
+      <div class="loading" id="loadMsg">Memuat promo...</div>
+      <table id="promoTable" style="display:none">
+        <thead><tr><th>Ref</th><th>Nama</th><th>Jenis</th><th>Periode</th><th>Kondisi</th><th>Rewards</th><th>Status</th><th>Region</th><th>Aksi</th></tr></thead>
+        <tbody id="promoBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+<script>
+const ADMIN_KEY='wim_admin_token';
+try{const u=JSON.parse(sessionStorage.getItem('admin_user')||'{}');if(document.getElementById('userName'))document.getElementById('userName').textContent=u.name||'-';if(document.getElementById('userRole'))document.getElementById('userRole').textContent=u.role||'-'}catch(e){}
+async function api(path,opts){const r=await fetch(path,{credentials:'same-origin',headers:{'Accept':'application/json','Content-Type':'application/json'},...opts});if(r.status===401){logout();throw new Error('Sesi habis')}const d=await r.json();if(!r.ok)throw new Error(d.error||'Gagal');return d}
+function logout(){localStorage.removeItem(ADMIN_KEY);sessionStorage.removeItem('admin_user');fetch('/api/admin/logout',{method:'POST',credentials:'same-origin'}).catch(()=>{});location.href='index.html'}
+function showToast(msg,type){const t=document.getElementById('toast');t.textContent=msg;t.className='toast toast-'+type;t.style.display='block';setTimeout(()=>{t.style.display='none'},3500)}
+function esc(s){return String(s||'').replace(/[&<>"']/g,function(m){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]})}
+
+let allPromos=[];let editUuid='';
+let products=[];     // cached product list -> {sku, name/sku}
+let regions=[];      // cached regions    -> {id, name}
+
+/* ---------- LOOKUP HELPERS ---------- */
+function regionById(id){return (regions.find(r=>String(r.id)===String(id))||{}).name||''}
+function regionNamesFor(p){
+  const ids = (p.regionIds && p.regionIds.length) ? p.regionIds : (p.regionId ? [p.regionId] : []);
+  if(!ids.length) return 'Semua Area';
+  const nam = ids.map(i=>regionById(i)).filter(Boolean);
+  return nam.length ? nam.join(', ') : 'All';
+}
+function skuLabel(sku){const p=products.find(x=>String(x.sku)===String(sku));return p?esc(p.sku+(p.name&&p.name!==p.sku?' · '+p.name:'')||sku):esc(sku)}
+function selectSkuOptions(sel,selVal){
+  let h='<option value="">— Pilih SKU —</option>';
+  h+='<option value="ANY" '+(String(selVal)==='ANY'?'selected':'')+'>* — Any Product (campuran) — *</option>';
+  products.forEach(p=>{h+='<option value="'+esc(p.sku)+'"'+(String(selVal)===String(p.sku)?' selected':'')+'>'+esc(p.sku+(p.name&&p.name!==p.sku?' · '+p.name:''))+'</option>'});
+  sel.innerHTML=h;
+}
+
+/* ---------- FORM CONTROL ---------- */
+function setType(t){
+  const bundle=(t==='bundling');
+  document.getElementById('rewardBundling').style.display=bundle?'':'none';
+  document.getElementById('rewardDiskon').style.display=bundle?'none':'';
+  document.getElementById('reqDesc').innerHTML=bundle
+    ?'Bundling: setiap baris = beli <b>Qty</b> dari SKU tsb. Beberapa baris = salah satu terpenuhi (atau).'
+    :'Discount: setiap baris = customer wajib beli <b>Qty</b> dari SKU tsb. Beberapa baris = SEMUA harus terpenuhi (dan).';
+}
+function currentType(){return document.querySelector('input[name="fType"]:checked').value}
+
+function toggleRedeemInputs(){
+  document.getElementById('fRedeemPerOrder').disabled=document.getElementById('fRedeemPerOrderUnl').checked;
+  document.getElementById('fRedeemLifetime').disabled=document.getElementById('fRedeemLifetimeUnl').checked;
+}
+function setRedeemForm(perOrder, lifetime){
+  const po=perOrder==null||perOrder===''||perOrder===0?'':perOrder;
+  const lt=lifetime==null||lifetime===''||lifetime===0?'':lifetime;
+  document.getElementById('fRedeemPerOrderUnl').checked=(po==='');
+  document.getElementById('fRedeemPerOrder').value=(po===''?'1':po);
+  document.getElementById('fRedeemLifetimeUnl').checked=(lt==='');
+  document.getElementById('fRedeemLifetime').value=(lt===''?'1':lt);
+  toggleRedeemInputs();
+}
+
+function addReqRow(selSku,selQty,andOr,isFirst){
+  const wrap=document.createElement('div');
+  wrap.className='req-row';
+  const opHtml = isFirst
+    ? '<span class="req-op-label" style="align-self:center;color:#8e8ea0;font-size:12px">Syarat 1</span>'
+    : '<div class="form-field" style="max-width:90px"><label>Operator</label><select class="req-op">'+
+        '<option value="and">dan (AND)</option>'+
+        '<option value="or"'+(andOr==='or'?' selected':'')+'>atau (OR)</option>'+
+      '</select></div>';
+  wrap.innerHTML=opHtml+
+    '<div class="form-field" style="flex:1"><label>SKU</label><select></select></div>'+
+    '<div class="form-field" style="max-width:110px"><label>Qty</label><input type="number" min="1" value="'+(selQty||1)+'"></div>'+
+    '<button class="req-remove" title="Hapus syarat" onclick="this.parentNode.remove();updateReqAddBtn()">✕</button>';
+  selectSkuOptions(wrap.querySelector('select'),selSku||'');
+  document.getElementById('reqList').appendChild(wrap);
+  updateReqAddBtn();
+}
+function updateReqAddBtn(){
+  const list=document.getElementById('reqList');
+  const addBtn=document.querySelector('.add-req-btn');
+  if(addBtn)addBtn.textContent='＋ Tambah syarat'+(list.children.length?' ('+list.children.length+')':'');
+}
+function readReqRows(){
+  const rows=[];
+  document.querySelectorAll('#reqList .req-row').forEach((r,idx)=>{
+    const opVal=(r.querySelector('.req-op')||{}).value||null;
+    const sku=r.querySelector('select').value;
+    const qty=parseInt(r.querySelector('input[type=number]').value,10);
+    const row={sku: sku==='ANY' ? null : sku, qty:qty};
+    if(idx>0 && opVal) row.andOr=opVal;
+    if(qty>0) rows.push(row);
+  });
+  return rows;
+}
+
+/* ---------- FORM OPEN / INIT ---------- */
+function resetForm(){
+  editUuid='';
+  document.getElementById('editUuid').textContent='';
+  document.getElementById('legacyNote').style.display='none';
+  document.getElementById('fName').value='';
+  document.getElementById('fAllAreas').checked=false;
+  setSelectedRegionIds([]);
+  document.getElementById('fStatus').value='active';
+  document.getElementById('fPriority').value='0';
+  document.getElementById('fStack').value='false';
+  document.getElementById('fStart').value='';
+  document.getElementById('fEnd').value='';
+  document.getElementById('fBonusSku').value='';
+  document.getElementById('fBonusQty').value='1';
+  document.getElementById('fDiscAmount').value='0';
+  document.getElementById('reqList').innerHTML='';
+  setRedeemForm(null, null);  // default: unlimited both
+  // default one empty req row (first)
+  addReqRow('',1,'and',true);
+}
+function toggleForm(){
+  const f=document.getElementById('addForm'),b=document.getElementById('addBtn');
+  f.classList.toggle('open');
+  b.textContent=f.classList.contains('open')?'✕ Tutup':'＋ Tambah Promo';
+  if(f.classList.contains('open')){
+    if(!editUuid){document.getElementById('legacyNote').style.display='none';document.getElementById('formHint')&&(document.getElementById('formHint').textContent='');}
+  }else{
+    document.getElementById('editUuid').textContent='';editUuid='';
+  }
+}
+function openFormOnAdd(){
+  if(!document.getElementById('addForm').classList.contains('open')){
+    document.getElementById('addForm').classList.add('open');
+    document.getElementById('addBtn').textContent='✕ Tutup';
+  }
+}
+
+/* ---------- EDIT PREFILL ---------- */
+function openEdit(id){
+  const p=allPromos.find(x=>x.id===id);if(!p)return;
+  openFormOnAdd();
+  editUuid=id;
+  document.getElementById('editUuid').textContent=id;
+  document.getElementById('fName').value=p.nama||'';
+  setFormAreaState(p.regionIds, p.regionId);
+  document.getElementById('fStatus').value=p.status||'active';
+  document.getElementById('fPriority').value=p.priority||0;
+  document.getElementById('fStack').value=p.stackable?'true':'false';
+  document.getElementById('fStart').value=p.periodeStart||p.periode_start||'';
+  document.getElementById('fEnd').value=p.periodeEnd||p.periode_end||'';
+  setRedeemForm(p.redeemLimitPerOrder==null?'':p.redeemLimitPerOrder,
+                p.redeemLimitLifetime==null?'':p.redeemLimitLifetime);
+
+  // clear existing dynamic rows
+  document.getElementById('reqList').innerHTML='';
+
+  const jenis=String(p.jenis||'').toLowerCase();
+  const conds=p.conditions||[];
+  const rw=p.rewards||[];
+
+  // ---- determine promo type ----
+  let type=jenis;
+  let legacyNote=false;
+  if(type!=='bundling'&&type!=='diskon'){type='diskon';legacyNote=true;}
+  // if the reward says discount -> diskon; free_sku -> bundling
+  if(rw.some(r=>String(r.type).includes('free_sku')||String(r.type).includes('free_qty'))){type='bundling';}
+  else if(rw.some(r=>['discount_amount','flat_discount','percent_discount','discount_pct'].includes(String(r.type)))){type='diskon';}
+  const bundle=(type==='bundling');
+  document.getElementById('typeBundling').checked=bundle;
+  document.getElementById('typeDiskon').checked=!bundle;
+  setType(type);
+  document.getElementById('legacyNote').style.display=legacyNote?'flex':'none';
+
+  // ---- map requirements ----
+  let hasClean=true;
+  let mappedReq=[]; // [{sku,qty,andOr}] thresholds rows
+  conds.forEach(c=>{
+    const t=String(c.type||'');const v=c.value||{};
+    const andOr=c.andOr||'or';
+    if(t==='required_sku'&&v&&typeof v==='object'){
+      // sku may be null = Any Product
+      mappedReq.push({sku:(v.sku||null),qty:parseInt(v.qty,10)||1,andOr:andOr});
+    }
+    else if(t==='purchase_sku'&&v&&typeof v==='object'&&v.sku){mappedReq.push({sku:v.sku,qty:parseInt(v.qty,10)||parseInt(c.qty,10)||1,andOr:andOr});}
+    else if(t==='purchase_qty_min'||t==='legacy_min_qty'||t==='min_qty'){
+      // attach qty to the previous purchase_sku requirement row if present, else standalone
+      const q=typeof v==='object'?parseInt(v.qty,10):parseInt(v,10);
+      if(mappedReq.length){mappedReq[mappedReq.length-1].qty=q||1;}else{hasClean=false;}
+    }
+    else if(t==='legacy_min_qty'||t==='legacy_min_amount'||t==='min_amount'||t==='min_purchase'){hasClean=false;}
+    else {hasClean=false;}
+  });
+  if(!mappedReq.length){
+    // no clean mapping -> legacy only
+    hasClean=false;
+    addReqRow('',1,'and',true); // one empty default row (first)
+  }else{
+    mappedReq.forEach((r,i)=>addReqRow(r.sku==null?'ANY':r.sku,r.qty,r.andOr,(i===0)));
+  }
+  if(!hasClean){document.getElementById('legacyNote').style.display='flex';}
+
+  // ---- map reward ----
+  const reward=rw.find(r=>[
+    'free_sku','free_qty','legacy_free_qty','discount_amount','flat_discount','percent_discount','discount_pct','bonus_qty'
+  ].includes(String(r.type)));
+  if(reward){
+    const t=String(reward.type||'');const v=reward.value||{};
+    if(t==='free_sku'||t==='free_qty'||t==='legacy_free_qty'||t==='bonus_qty'){
+      document.getElementById('fBonusSku').value=reward.skuRef||v.sku||'';
+      document.getElementById('fBonusQty').value=reward.qty||v.qty||1;
+      // free_sku with no explicit skuRef -> use value.sku
+      if(!(reward.skuRef||v.sku)){document.getElementById('fBonusSku').value='';}
+    }
+    else{ // discount
+      let amt=0;
+      if(t==='discount_amount')amt=v.amount||0;
+      else if(t==='flat_discount')amt=(typeof v==='object'?(v.amount||0):v)||0;
+      else if(t==='percent_discount'||t==='discount_pct'){
+        amt=(typeof v==='object'?(v.amount||0):v)||0; // best-effort as amount; note shown if legacy
+        legacyNote=true;
+      }
+      document.getElementById('fDiscAmount').value=amt||0;
+    }
+  }else{
+    document.getElementById('fDiscAmount').value='0';
+    document.getElementById('fBonusSku').value='';
+    document.getElementById('fBonusQty').value='1';
+  }
+  if(legacyNote){document.getElementById('legacyNote').style.display='flex';}
+}
+
+/* ---------- SAVE ---------- */
+function savePromo(){
+  const name=document.getElementById('fName').value.trim();
+  const regionIds=selectedRegionIds();
+  if(!name){showToast('Nama promo diperlukan','error');return}
+  if(!regionIds.length){showToast('Pilih minimal satu Area terlebih dahulu','error');return}
+
+  const type=currentType();
+  const bundle=(type==='bundling');
+  const reqs=readReqRows();
+
+  // build requirements array (structured)
+  const requirements=reqs;
+  if(!requirements.length){showToast('Tambahkan minimal satu syarat','error');return}
+
+  // build reward
+  let reward;
+  if(bundle){
+    const sku=document.getElementById('fBonusSku').value;
+    const qty=parseInt(document.getElementById('fBonusQty').value,10)||0;
+    if(!sku){showToast('Pilih Bonus SKU','error');return}
+    if(qty<1){showToast('Bonus Qty minimal 1','error');return}
+    reward={type:'free_sku',sku:sku,qty:qty};
+  }else{
+    const amount=parseFloat(document.getElementById('fDiscAmount').value)||0;
+    if(amount<=0){showToast('Jumlah potongan harus lebih dari 0','error');return}
+    reward={type:'discount_amount',amount:amount};
+  }
+
+  const body={
+    nama:name,
+    jenis:type,
+    status:document.getElementById('fStatus').value,
+    priority:parseInt(document.getElementById('fPriority').value,10)||0,
+    stackable:document.getElementById('fStack').value==='true',
+    regionIds:regionIds,
+    allAreas:document.getElementById('fAllAreas').checked,
+    periode_start:document.getElementById('fStart').value||null,
+    periode_end:document.getElementById('fEnd').value||null,
+    redeemLimitPerOrder:document.getElementById('fRedeemPerOrderUnl').checked?null:parseInt(document.getElementById('fRedeemPerOrder').value,10)||0,
+    redeemLimitLifetime:document.getElementById('fRedeemLifetimeUnl').checked?null:parseInt(document.getElementById('fRedeemLifetime').value,10)||0,
+    requirements:requirements,
+    reward:reward
+  };
+
+  (async()=>{
+    try{
+      if(editUuid){
+        await api('/api/admin/promos/'+editUuid,{method:'PATCH',body:JSON.stringify(body)});
+        showToast('✅ Promo diperbarui','success');
+      }else{
+        await api('/api/admin/promos',{method:'POST',body:JSON.stringify(body)});
+        showToast('✅ Promo ditambahkan','success');
+      }
+      toggleForm();await loadPromos();
+    }catch(e){showToast('❌ Gagal: '+e.message,'error')}
+  })();
+}
+
+/* ---------- LIST ACTIONS ---------- */
+function dupPromo(id){
+  const p=allPromos.find(x=>x.id===id);if(!p)return;
+  if(!confirm('Duplikat promo "'+p.nama+'"?'))return;
+  const body={
+    nama:p.nama+' (copy)',jenis:p.jenis,status:'inactive',priority:(p.priority||0)+10,stackable:!!p.stackable,
+    periode_start:p.periodeStart,periode_end:p.periodeEnd,
+    regionIds:(p.regionIds&&p.regionIds.length)?p.regionIds:((p.regionId)?[p.regionId]:[]),
+    conditions:p.conditions||[],rewards:p.rewards||[]
+  };
+  (async()=>{try{await api('/api/admin/promos',{method:'POST',body:JSON.stringify(body)});showToast('✅ Promo diduplikat','success');await loadPromos()}catch(e){showToast('❌ Gagal: '+e.message,'error')}})();
+}
+async function togglePromo(id){
+  const p=allPromos.find(x=>x.id===id);if(!p)return;
+  try{
+    await api('/api/admin/promos/'+id,{method:'PATCH',body:JSON.stringify({status:p.status==='active'?'inactive':'active'})});
+    showToast('✅ Promo diperbarui','success');await loadPromos();
+  }catch(e){showToast('❌ Gagal: '+e.message,'error')}
+}
+async function delPromo(id){
+  if(!confirm('Hapus promo ini?'))return;
+  try{
+    await api('/api/admin/promos/'+id,{method:'DELETE'});
+    showToast('✅ Promo hapus','success');await loadPromos();
+  }catch(e){showToast('❌ Gagal: '+e.message,'error')}
+}
+
+/* ---------- CONDITION/REWARD TEXT (for list) ---------- */
+function parseRule(list){
+  if(!list||!list.length)return '—';
+  return esc(list.map(cond=>{
+    const v=cond.value||{};
+    const t=String(cond.type||'');
+    if(t==='required_sku')return 'BUY '+(v.qty?v.qty+'× ':'')+esc(v.sku);
+    if(t==='purchase_sku')return 'BUY '+esc(v.sku);
+    if(t==='purchase_qty_min'||t==='min_qty'||t==='legacy_min_qty')return ' ≥ '+(v.qty?v.qty:v);
+    if(t==='min_amount'||t==='min_purchase')return 'min Rp '+esc((typeof v==='object'?(v.amount||0):v));
+    if(t==='eligible_sku_category')return 'cat '+esc(v.category||v.sku||'');
+    if(t==='product_qty')return ' ≥ '+esc(v.qty?v.qty:v);
+    return esc(t)+' '+(typeof v==='object'?JSON.stringify(v):esc(v));
+  }).join(' '));
+}
+function rewardText(rw){
+  if(!rw||!rw.length)return '—';
+  const l=[];
+  rw.forEach(r=>{
+    const v=r.value||{};const t=String(r.type||'');
+    const qty=r.qty||v.qty||'';
+    if(t==='free_sku')l.push('🎁 +'+esc(qty)+' '+esc(r.skuRef||v.sku||''));
+    if(t==='legacy_free_qty'||t==='free_qty')l.push('🎁 +'+esc(qty)+' '+esc(r.skuRef||v.sku||'any sku'));
+    if(t==='discount_amount')l.push('-Rp '+esc(v.amount||''));
+    if(t==='percent_discount')l.push('-'+esc(v.pct||v.amount||'')+'%');
+    if(t==='flat_discount')l.push('-Rp '+esc(typeof v==='object'?(v.amount||0):v));
+    if(t==='discount_pct')l.push('-'+esc((typeof v==='object'?(v.pct||''):v))+'%');
+    if(t==='bonus_qty')l.push('🎁 +'+esc(v.qty||''));
+  });
+  return l.filter(x=>x&&x!=='🎁 +undefined').join(', ')||'—';
+}
+
+/* ---------- RENDER LIST ---------- */
+function render(){
+  const tb=document.getElementById('promoBody');
+  const q=(document.getElementById('searchQ')?.value||'').toLowerCase();
+  const fr=document.getElementById('filterRegion')?.value||'';
+  const ft=document.getElementById('filterType')?.value||'';
+  const fs=document.getElementById('filterStatus')?.value||'';
+  const sort=document.getElementById('sortSel')?.value||'';
+  let list=allPromos.filter(p=>{
+    if(fr&&String(p.regionId)!==String(fr))return false;
+    if(ft&&p.jenis!==ft)return false;
+    if(fs&&p.status!==fs)return false;
+    if(q&&!(p.nama||'').toLowerCase().includes(q)&&!(p.promoRef||'').toLowerCase().includes(q))return false;
+    return true;
+  });
+  if(sort==='nama')list=list.sort((a,b)=>(a.nama||'').localeCompare(b.nama||''));
+  if(sort==='status')list=list.sort((a,b)=>(a.status||'').localeCompare(b.status||''));
+  document.getElementById('promoCount').textContent=list.length+'/'+allPromos.length+' promo';
+  if(!list.length){tb.innerHTML='<tr><td colspan="9" style="text-align:center;padding:20px;color:#8e8ea0">Belum ada promo</td></tr>';return}
+  tb.innerHTML=list.map(p=>{
+    const st=p.status==='active'?'<span class="status-badge status-ok">Active</span>':'<span class="status-badge status-miss">Inactive</span>';
+    const stack=p.stackable?'<span class="status-badge status-info">Stack</span>':'';
+    const reg=esc(regionNamesFor(p));
+    return `<tr>
+      <td style="font-family:monospace;font-size:12px">${esc(p.promoRef)}</td>
+      <td><b>${esc(p.nama)}</b></td>
+      <td><span class="status-badge status-info">${esc(p.jenis)}</span> ${stack}</td>
+      <td style="font-size:12px">${esc(p.periodeStart||'…')} → ${esc(p.periodeEnd||'∞')}</td>
+      <td style="font-size:12px;max-width:180px">${parseRule(p.conditions)}</td>
+      <td style="font-size:12px;max-width:180px">${rewardText(p.rewards)}</td>
+      <td>${st}</td>
+      <td><span class="status-badge status-info">${reg}</span></td>
+      <td>
+        <button class="btn btn-outline btn-sm" onclick="openEdit(${p.id})">✏️ Edit</button>
+        <button class="btn btn-outline btn-sm" onclick="dupPromo(${p.id})">⧉ Dup</button>
+        <button class="btn btn-outline btn-sm" onclick="togglePromo(${p.id})">${p.status==='active'?'Nonaktifkan':'Aktifkan'}</button>
+        <button class="btn btn-danger btn-sm" onclick="delPromo(${p.id})">✕</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+/* ---------- LOAD DATA ---------- */
+function populateRegionSelects(){
+  const opts=regions.map(r=>'<option value="'+esc(r.id)+'">'+esc(r.name)+'</option>').join('');
+  // multi-area checkbox chips in the form
+  document.getElementById('fAreaGroup').innerHTML = regions.map(r =>
+    `<label class="area-chip" data-rid="${esc(r.id)}" style="display:inline-flex;align-items:center;gap:5px;padding:5px 10px;background:#fff;border:1px solid #d0d5dd;border-radius:16px;font-size:12px;cursor:pointer">
+       <input type="checkbox" data-rid="${esc(r.id)}" onchange="areaChipCheck(this)"> ${esc(r.name)}</label>`
+  ).join('');
+  document.getElementById('filterRegion').innerHTML='<option value="">Semua Region</option>'+opts;
+}
+/* multi-area helpers */
+function toggleAllAreasPromo(){
+  const all=document.getElementById('fAllAreas').checked;
+  document.querySelectorAll('#fAreaGroup input[type=checkbox]').forEach(cb=>{ cb.checked=all; cb.closest('label').classList.toggle('checked',all); });
+}
+function areaChipCheck(cb){ cb.closest('label').classList.toggle('checked',cb.checked); }
+function selectedRegionIds(){
+  if(document.getElementById('fAllAreas').checked){ return regions.map(r=>r.id); }
+  return [...document.querySelectorAll('#fAreaGroup input[type=checkbox]:checked')].map(cb=>Number(cb.dataset.rid));
+}
+function setSelectedRegionIds(ids){
+  const set=new Set((ids||[]).map(String));
+  document.getElementById('fAllAreas').checked = (ids===null || ids===undefined) || set.size>=regions.length;
+  document.querySelectorAll('#fAreaGroup input[type=checkbox]').forEach(cb=>{
+    const on=set.has(String(cb.dataset.rid));
+    cb.checked=on; cb.closest('label').classList.toggle('checked',on);
+  });
+}
+function setFormAreaState(regionsIds, legacyRegionId){
+  // prefers promo_regions list; falls back to legacy single region_id
+  if(regionsIds && regionsIds.length){ setSelectedRegionIds(regionsIds); }
+  else if(legacyRegionId){ setSelectedRegionIds([legacyRegionId]); }
+  else { setSelectedRegionIds([]); }
+}
+async function loadPromos(){
+  document.getElementById('loadMsg').style.display='block';
+  try{
+    const d=await api('/api/admin/promos');
+    allPromos=d.promos||[];
+    document.getElementById('loadMsg').style.display='none';
+    document.getElementById('promoTable').style.display='';
+    render();
+  }catch(e){
+    document.getElementById('loadMsg').textContent='Gagal memuat: '+e.message;
+    document.getElementById('loadMsg').style.color='#c0392b';
+  }
+}
+async function loadDropdowns(){
+  try{
+    const d=await api('/api/admin/filter-options');
+    regions=d.regions||[];
+    populateRegionSelects();
+  }catch(e){}
+  try{
+    const d=await api('/api/admin/products');
+    products=d.products||[];
+    // refresh any existing req row selects + bonus sku select
+    document.querySelectorAll('#reqList .req-row select').forEach(s=>{const kv=s.value;selectSkuOptions(s,kv)});
+    selectSkuOptions(document.getElementById('fBonusSku'),document.getElementById('fBonusSku').value);
+  }catch(e){}
+}
+// init: an empty default req row + seed form, then load
+resetForm();
+loadDropdowns();
+loadPromos();
+
+document.querySelectorAll('.rencana-drop').forEach(function(dd){var menu=dd.querySelector('span[style*="position:absolute"]');if(!menu)return;dd.addEventListener('mouseenter',function(){menu.style.display='block'});dd.addEventListener('mouseleave',function(){menu.style.display='none'});});
+</script>
+<div id="appFooter"></div>
+<script src="js/include.js"></script>
+</body>
+</html>

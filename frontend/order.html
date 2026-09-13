@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>WIM Online — Buat Pesanan</title>
+<link rel="stylesheet" href="css/app.css">
+<style>
+/* Order page specific */
+.order-header{display:flex;align-items:center;gap:12px;padding:12px 16px;background:#fff;border-bottom:1px solid #eee;position:sticky;top:0;z-index:10;}
+.order-header .back-btn{font-size:20px;background:none;border:none;cursor:pointer;padding:8px;color:var(--blue);}
+.order-header h1{font-size:16px;font-weight:700;color:var(--gray-700);margin:0;flex:1;}
+.order-header .store-name{font-size:11px;color:var(--gray-400);margin-top:2px;}
+
+.brand-tabs{display:flex;overflow-x:auto;gap:8px;padding:10px 16px;background:#fff;border-bottom:1px solid #eee;position:sticky;top:60px;z-index:9;white-space:nowrap;}
+.brand-tab{padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;background:var(--gray-50);border:1px solid var(--gray-100);cursor:pointer;color:var(--gray-500);}
+.brand-tab.active{background:var(--blue);color:#fff;border-color:var(--blue);}
+
+.search-bar{padding:10px 16px;background:#fff;}
+.search-bar input{width:100%;padding:10px 14px;border:1px solid var(--gray-200);border-radius:10px;font-size:14px;outline:none;}
+
+.product-list{flex:1;overflow-y:auto;padding:12px 16px;padding-bottom:120px;}
+.product-card{display:flex;align-items:center;gap:12px;background:#fff;border-radius:12px;padding:12px;margin-bottom:10px;box-shadow:var(--shadow-sm);border:1px solid #f0f0f0;}
+.product-info{flex:1;min-width:0;}
+.product-name{font-size:13px;font-weight:600;color:var(--gray-700);line-height:1.3;}
+.product-sku{font-size:10px;color:var(--gray-400);margin-top:2px;}
+.product-price{font-size:14px;font-weight:700;color:var(--blue);margin-top:4px;}
+.promo-badge{display:inline-block;background:#fff3cd;color:#856404;font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;margin-top:4px;}
+.qty-control{display:flex;align-items:center;gap:8px;}
+.qty-btn{width:32px;height:32px;border-radius:8px;border:1px solid var(--gray-200);background:#fff;font-size:18px;font-weight:700;color:var(--blue);cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.qty-btn:disabled{opacity:0.4;cursor:not-allowed;}
+.qty-val{min-width:24px;text-align:center;font-size:14px;font-weight:700;color:var(--gray-700);}
+
+.cart-bar{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid #eee;padding:12px 16px;padding-bottom:calc(12px + env(safe-area-inset-bottom));box-shadow:0 -4px 12px rgba(0,0,0,0.08);z-index:20;}
+.cart-summary{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+.cart-summary .count{font-size:12px;color:var(--gray-400);}
+.cart-summary .total{font-size:18px;font-weight:800;color:var(--blue);}
+.cart-summary .bonus{font-size:11px;color:var(--green);font-weight:600;}
+.btn-checkout{width:100%;padding:14px;border:none;border-radius:12px;background:var(--green);color:#fff;font-size:15px;font-weight:700;cursor:pointer;}
+.btn-checkout:disabled{background:var(--gray-200);color:var(--gray-400);cursor:not-allowed;}
+
+/* Cart modal */
+.cart-modal{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:30;display:none;align-items:flex-end;justify-content:center;}
+.cart-sheet{background:#fff;width:100%;max-width:480px;max-height:85vh;border-radius:16px 16px 0 0;display:flex;flex-direction:column;overflow:hidden;}
+.cart-sheet-header{padding:16px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;align-items:center;}
+.cart-sheet-header h2{font-size:16px;font-weight:700;margin:0;color:var(--gray-700);}
+.cart-sheet-body{flex:1;overflow-y:auto;padding:12px 16px;}
+.cart-line{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #f5f5f5;}
+.cart-line:last-child{border-bottom:none;}
+.cart-line .l-name{flex:1;font-size:13px;color:var(--gray-700);font-weight:500;}
+.cart-line .l-sku{font-size:10px;color:var(--gray-400);}
+.cart-line .l-total{font-size:13px;font-weight:700;color:var(--gray-700);}
+.cart-line .l-discount{font-size:10px;color:var(--red);font-weight:600;}
+.cart-line .l-remove{background:none;border:none;color:var(--red);font-size:16px;cursor:pointer;padding:4px;}
+.cart-line.bonus{background:#f0fdf4;border-radius:8px;padding:8px 10px;margin:4px 0;}
+.cart-line.bonus .l-name{color:var(--green);}
+.promo-tag{display:inline-block;background:#fef3c7;color:#92400e;font-size:9px;font-weight:600;padding:1px 6px;border-radius:3px;margin-left:6px;}
+.summary-block{padding:12px 0;border-top:1px solid #eee;margin-top:12px;}
+.summary-row{display:flex;justify-content:space-between;font-size:13px;color:var(--gray-400);padding:3px 0;}
+.summary-row.total{font-size:16px;font-weight:800;color:var(--gray-700);border-top:1px solid #eee;padding-top:10px;margin-top:6px;}
+.summary-row.discount{color:var(--red);font-weight:600;}
+.promo-applied{margin-top:10px;padding:8px 10px;background:#f0f4ff;border-radius:8px;font-size:11px;color:var(--blue);line-height:1.5;}
+.cart-sheet-footer{padding:14px 16px;border-top:1px solid #eee;}
+.btn-primary-lg{width:100%;padding:14px;border:none;border-radius:12px;background:var(--blue);color:#fff;font-size:15px;font-weight:700;cursor:pointer;}
+.pay-opt{flex:1;padding:10px;border:1.5px solid var(--gray-200);border-radius:8px;background:#fff;font-size:13px;font-weight:700;color:var(--gray-700);cursor:pointer;transition:all .15s}
+.pay-opt.active{background:var(--blue);color:#fff;border-color:var(--blue)}
+.btn-primary-lg:disabled{background:var(--gray-200);color:var(--gray-400);cursor:not-allowed;}
+
+/* Success screen */
+.success-screen{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:#fff;z-index:40;flex-direction:column;align-items:center;justify-content:center;padding:24px;}
+.success-screen .icon{font-size:64px;margin-bottom:16px;}
+.success-screen h2{font-size:20px;font-weight:800;color:var(--green);margin-bottom:8px;}
+.success-screen .order-id{font-size:14px;color:var(--gray-400);margin-bottom:4px;}
+.success-screen .order-ref{font-size:18px;font-weight:700;color:var(--blue);margin-bottom:16px;}
+.success-screen .qr-box{width:180px;height:180px;background:#fff;border:2px dashed var(--gray-200);border-radius:12px;display:flex;align-items:center;justify-content:center;margin-bottom:16px;overflow:hidden;}
+.success-screen .qr-box img{width:100%;height:100%;object-fit:contain;}
+.success-screen .verify-btn{padding:14px 32px;border:none;border-radius:12px;background:var(--green);color:#fff;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:8px;}
+.success-screen .back-btn{background:none;border:none;color:var(--gray-400);font-size:13px;cursor:pointer;}
+
+/* Skeleton */
+.skeleton{background:linear-gradient(90deg,#f0f0f0 25%,#e0e0e0 50%,#f0f0f0 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:8px;}
+@keyframes shimmer{0%{background-position:200% 0;}100%{background-position:-200% 0;}}
+.skeleton-card{height:72px;margin-bottom:10px;}
+.empty-state{text-align:center;padding:40px 20px;color:var(--gray-400);font-size:13px;}
+</style>
+</head>
+<body>
+<div class="app-shell">
+  <!-- Header -->
+  <div class="order-header">
+    <button class="back-btn" onclick="window.history.back()">←</button>
+    <div>
+      <h1>Buat Pesanan</h1>
+      <div class="store-name" id="orderStoreName">Memuat...</div>
+    </div>
+  </div>
+
+  <!-- Brand tabs -->
+  <div class="brand-tabs" id="brandTabs">
+    <button class="brand-tab active" data-brand="" onclick="filterBrand('')">Semua</button>
+  </div>
+
+  <!-- Search -->
+  <div class="search-bar">
+    <input type="search" id="productSearch" placeholder="🔍 Cari produk..." oninput="debouncedSearch()">
+  </div>
+
+  <!-- Product list -->
+  <div class="product-list" id="productList">
+    <div class="skeleton skeleton-card"></div>
+    <div class="skeleton skeleton-card"></div>
+    <div class="skeleton skeleton-card"></div>
+    <div class="skeleton skeleton-card"></div>
+    <div class="skeleton skeleton-card"></div>
+  </div>
+
+  <!-- Cart bar -->
+  <div class="cart-bar" id="cartBar" style="display:none;">
+    <div class="cart-summary">
+      <div>
+        <div class="count" id="cartCount">0 item</div>
+        <div class="bonus" id="cartBonus" style="display:none;"></div>
+      </div>
+      <div style="text-align:right;">
+        <div class="total" id="cartTotal">Rp 0</div>
+        <div style="font-size:10px;color:var(--gray-400);" id="cartDiscountLabel" style="display:none;"></div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn-checkout" style="flex:1;background:var(--blue);" onclick="openCartModal()">🛒 Lihat Keranjang</button>
+      <button class="btn-checkout" style="flex:2;" onclick="openCheckout()" id="btnCheckout">Buat Pesanan</button>
+    </div>
+  </div>
+</div>
+
+<!-- Cart modal -->
+<div class="cart-modal" id="cartModal" onclick="if(event.target===this)closeCartModal()">
+  <div class="cart-sheet">
+    <div class="cart-sheet-header">
+      <h2>🛒 Keranjang</h2>
+      <button style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--gray-400);" onclick="closeCartModal()">✕</button>
+    </div>
+    <div class="cart-sheet-body" id="cartSheetBody">
+      <!-- lines rendered here -->
+    </div>
+    <div class="cart-sheet-footer">
+      <div class="summary-block" id="cartSummaryBlock"></div>
+      <div class="checkout-opts" id="checkoutOpts" style="padding:10px 0;border-top:1px solid #eee;margin-top:8px;">
+        <div style="font-size:13px;font-weight:700;color:var(--gray-700);margin-bottom:8px;">💳 Opsi Pembayaran</div>
+        <div style="display:flex;gap:8px;margin-bottom:6px;" id="payMethodGroup">
+          <button type="button" class="pay-opt active" data-pay="cash" onclick="setPayMethod('cash')">💵 Tunai</button>
+          <button type="button" class="pay-opt" data-pay="credit" onclick="setPayMethod('credit')">💳 Kredit</button>
+        </div>
+        <div id="transTypeWrap" style="display:none;margin-top:8px;">
+          <div style="font-size:12px;font-weight:600;color:var(--gray-500);margin-bottom:6px;">Jenis Transaksi (Luar Rute)</div>
+          <select id="transType" style="width:100%;padding:9px 10px;border:1px solid #e0e0e8;border-radius:8px;font-size:13px;">
+            <option value="">Pilih jenis transaksi</option>
+            <option value="WA">WA</option>
+            <option value="Telepon">Telepon</option>
+            <option value="Admin Bantu">Admin Bantu</option>
+            <option value="Lainnya">Lainnya</option>
+          </select>
+        </div>
+      </div>
+      <button class="btn-primary-lg" onclick="closeCartModal();openCheckout()">Lanjut ke Checkout →</button>
+    </div>
+  </div>
+</div>
+
+<!-- Success screen -->
+<div class="success-screen" id="successScreen">
+  <div class="icon">✅</div>
+  <h2>Pesanan Berhasil!</h2>
+  <div class="order-id">ID Pesanan</div>
+  <div class="order-ref" id="successOrderId">-</div>
+  <div class="qr-box" id="qrBox">QR</div>
+  <button class="verify-btn" onclick="verifyOrder()" id="btnVerify">📷 Verifikasi (Scan QR)</button>
+  <button class="back-btn" onclick="finishAndBack()">← Kembali ke Kunjungan</button>
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/api.js"></script>
+<script src="js/app.js"></script>
+<script src="js/qrcode.min.js"></script>
+<script src="js/order-cart.js"></script>
+<script>
+let cart = null;
+let checkinId = '';
+let products = [];
+let allProducts = [];
+let promos = [];
+let currentBrand = '';
+let currentOrderUuid = '';
+let searchTimer = null;
+let paymentMethod = 'cash';
+let storeSource = 'route';
+let offRouteType = '';
+
+// ── Init
+document.addEventListener('DOMContentLoaded', async () => {
+  const session = await Session.checkOrRedirect();
+  if (!session) return;
+
+  const ctx = OrderCart.hydrateFromUrl();
+  checkinId = ctx.checkinId || '';
+  const urlP = new URLSearchParams(location.search);
+  storeSource = urlP.get('src') || 'route';
+  if (storeSource === 'luar_rute') {
+    document.getElementById('transTypeWrap').style.display = 'block';
+  }
+  if (ctx.storeUuid) {
+    cart = new OrderCart(ctx.storeUuid, ctx.storeName);
+    document.getElementById('orderStoreName').textContent = ctx.storeName;
+  } else {
+    document.getElementById('orderStoreName').textContent = 'Toko tidak diketahui';
+    cart = new OrderCart('', '');
+  }
+
+  await Promise.all([loadProducts(), loadPromos()]);
+  renderProducts();
+  updateCartBar();
+});
+
+// ── Product catalog
+async function loadProducts() {
+  try {
+    // Send the store's location so the middleware returns prices for the shop's area
+    const storeParam = cart && cart.storeUuid ? ('?store=' + encodeURIComponent(cart.storeUuid)) : '';
+    const resp = await fetch('/api/products' + storeParam, { credentials: 'same-origin' });
+    const data = await resp.json();
+    allProducts = data.products || [];
+    allProducts.forEach(p => { p.regionId = data.regionId; });
+    renderBrandTabs(data.brands || []);
+  } catch (e) {
+    document.getElementById('productList').innerHTML = '<div class="empty-state">Gagal memuat produk</div>';
+  }
+}
+
+function renderBrandTabs(brands) {
+  const tabWrap = document.getElementById('brandTabs');
+  tabWrap.innerHTML = '<button class="brand-tab active" data-brand="" onclick="filterBrand(\'\')">Semua</button>' +
+    brands.map(b => `<button class="brand-tab" data-brand="${b}" onclick="filterBrand('${b}')">${b}</button>`).join('');
+}
+
+function filterBrand(brand) {
+  currentBrand = brand;
+  document.querySelectorAll('.brand-tab').forEach(t => t.classList.toggle('active', t.dataset.brand === brand));
+  renderProducts();
+}
+
+function debouncedSearch() {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(renderProducts, 300);
+}
+
+function renderProducts() {
+  const q = (document.getElementById('productSearch').value || '').toLowerCase();
+  let list = allProducts;
+  if (currentBrand) list = list.filter(p => p.brand === currentBrand);
+  if (q) list = list.filter(p => p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q));
+
+  const el = document.getElementById('productList');
+  if (list.length === 0) {
+    el.innerHTML = '<div class="empty-state">Tidak ada produk tersedia</div>';
+    return;
+  }
+
+  el.innerHTML = list.map(p => {
+    const cartItem = cart ? cart.items.find(i => i.sku === p.sku && !i.is_bonus) : null;
+    const qty = cartItem ? cartItem.qty : 0;
+    // PROMO badge: the SKU is a requirement (required_sku / purchase_sku) OR a bonus reward of any active promo
+    const hasPromo = promos.some(pr => {
+      const reqSku = pr.conditions.some(c => {
+        const t = c.type;
+        const v = c.value;
+        if ((t === 'required_sku') && v && typeof v === 'object' && v.sku === p.sku) return true;
+        if ((t === 'purchase_sku') && v && typeof v === 'object' && v.sku === p.sku) return true;
+        return false;
+      });
+      const bonusSku = pr.rewards.some(r => (r.skuRef || (r.value && r.value.sku)) === p.sku);
+      return reqSku || bonusSku;
+    });
+    return `
+      <div class="product-card" data-sku="${p.sku}">
+        <div class="product-info">
+          <div class="product-name">${p.name}</div>
+          <div class="product-sku">${p.sku} • ${p.category || ''}</div>
+          <div class="product-price">${formatIDR(p.price)}</div>
+          ${hasPromo ? '<span class="promo-badge">🏷 PROMO</span>' : ''}
+        </div>
+        <div class="qty-control">
+          <button class="qty-btn" onclick="decQty('${p.sku}')" ${qty === 0 ? 'disabled' : ''}>−</button>
+          <span class="qty-val" id="qty_${p.sku}">${qty}</span>
+          <button class="qty-btn" onclick="incQty('${p.sku}','${p.name}',${p.price})">+</button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ── Cart actions
+function incQty(sku, name, price) {
+  cart.addProduct(sku, name, price);
+  updateCartBar();
+  renderProducts();
+  recalc();
+}
+
+function decQty(sku) {
+  const item = cart.items.find(i => i.sku === sku && !i.is_bonus);
+  if (item) {
+    cart.updateQty(sku, item.qty - 1);
+    updateCartBar();
+    renderProducts();
+    recalc();
+  }
+}
+
+async function recalc() {
+  if (cart.purchasedItems.length === 0) {
+    cart.totals = { subtotal: 0, totalDiscount: 0, strataDiscount: 0, grandTotal: 0, bonusValue: 0 };
+    cart.promosApplied = [];
+    cart.save();
+    updateCartBar();
+    return;
+  }
+  try {
+    const resp = await fetch('/api/orders/calculate', {
+      method: 'POST', credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(cart.toPayload())
+    });
+    const data = await resp.json();
+    if (data.purchased) cart.applyCalculation(data);
+    updateCartBar();
+  } catch (e) { console.error('Calc failed:', e); }
+}
+
+function updateCartBar() {
+  const bar = document.getElementById('cartBar');
+  const count = cart.itemCount;
+  if (count === 0) {
+    bar.style.display = 'none';
+    return;
+  }
+  bar.style.display = 'block';
+  document.getElementById('cartCount').textContent = `${count} item (${cart.lineCount} jenis)`;
+  document.getElementById('cartTotal').textContent = formatIDR(cart.totals.grandTotal);
+
+  const bonusEl = document.getElementById('cartBonus');
+  if (cart.bonusItems.length > 0) {
+    bonusEl.textContent = `🎁 Bonus: ${cart.bonusItems.map(b => `${b.qty} ${b.name || b.sku}`).join(', ')}`;
+    bonusEl.style.display = 'block';
+  } else bonusEl.style.display = 'none';
+
+  const discEl = document.getElementById('cartDiscountLabel');
+  if (cart.totals.totalDiscount > 0) {
+    discEl.textContent = `Diskon: -${formatIDR(cart.totals.totalDiscount)}`;
+    discEl.style.display = 'block';
+  } else discEl.style.display = 'none';
+}
+
+// ── Cart modal
+function openCartModal() {
+  renderCartSheet();
+  document.getElementById('cartModal').style.display = 'flex';
+}
+
+function closeCartModal() {
+  document.getElementById('cartModal').style.display = 'none';
+}
+
+function renderCartSheet() {
+  const body = document.getElementById('cartSheetBody');
+  const purchased = cart.purchasedItems;
+  if (purchased.length === 0) {
+    body.innerHTML = '<div class="empty-state">Keranjang masih kosong</div>';
+  } else {
+    body.innerHTML = purchased.map(i => `
+      <div class="cart-line">
+        <div style="flex:1;">
+          <div class="l-name">${i.name} <span class="promo-tag" style="${i.unitDiscount > 0 ? '' : 'display:none;'}">-${formatIDR(i.unitDiscount)}</span></div>
+          <div class="l-sku">${i.sku} × ${i.qty} @ ${formatIDR(i.unitPrice)}</div>
+        </div>
+        <div style="text-align:right;">
+          <div class="l-total">${formatIDR(i.qty * (i.unitPrice - (i.unitDiscount || 0)))}</div>
+          ${i.unitDiscount > 0 ? `<div class="l-discount">-${formatIDR(i.qty * i.unitDiscount)}</div>` : ''}
+        </div>
+        <button class="l-remove" onclick="cart.removeItem('${i.sku}');renderCartSheet();updateCartBar();recalc();">🗑</button>
+      </div>`).join('');
+
+    // Bonus lines
+    if (cart.bonusItems.length > 0) {
+      body.innerHTML += '<div style="margin-top:10px;font-size:11px;font-weight:700;color:var(--green);">🎁 BONUS GRATIS</div>';
+      body.innerHTML += cart.bonusItems.map(b => `
+        <div class="cart-line bonus">
+          <div style="flex:1;">
+            <div class="l-name">${b.name || b.sku}</div>
+            <div class="l-sku">Gratis ${b.qty} • ${b.promoName || 'Promo'}</div>
+          </div>
+          <div class="l-total" style="color:var(--green);">GRATIS</div>
+        </div>`).join('');
+    }
+  }
+
+  // Summary
+  const promoInfo = cart.promosApplied.length > 0
+    ? `<div class="promo-applied">🎉 ${cart.promosApplied.map(p => `${p.nama}`).join('<br>')}</div>` : '';
+  document.getElementById('cartSummaryBlock').innerHTML = `
+    <div class="summary-row"><span>Subtotal</span><span>${formatIDR(cart.totals.subtotal)}</span></div>
+    ${cart.totals.strataDiscount > 0 ? `<div class="summary-row discount"><span>Diskon Strata</span><span>-${formatIDR(cart.totals.strataDiscount)}</span></div>` : ''}
+    ${cart.totals.totalDiscount > 0 ? `<div class="summary-row discount"><span>Total Diskon</span><span>-${formatIDR(cart.totals.totalDiscount)}</span></div>` : ''}
+    <div class="summary-row total"><span>Total</span><span>${formatIDR(cart.totals.grandTotal)}</span></div>
+    ${promoInfo}`;
+}
+
+// ── Checkout
+function setPayMethod(m) {
+  paymentMethod = m;
+  document.querySelectorAll('#payMethodGroup .pay-opt').forEach(b => b.classList.toggle('active', b.dataset.pay === m));
+}
+
+async function openCheckout() {
+  if (!checkinId) {
+    showToast('error', 'Check-in dulu!', 'Anda harus check-in di toko sebelum membuat pesanan');
+    return;
+  }
+  if (cart.purchasedItems.length === 0) {
+    showToast('warning', 'Keranjang kosong', 'Tambahkan produk dulu');
+    return;
+  }
+  if (storeSource === 'luar_rute') {
+    offRouteType = document.getElementById('transType').value;
+    if (!offRouteType) {
+      showToast('warning', 'Jenis transaksi', 'Untuk pesanan luar rute, pilih jenis transaksi');
+      return;
+    }
+  } else {
+    offRouteType = '';
+  }
+  const btn = document.getElementById('btnCheckout');
+  btn.disabled = true;
+  btn.textContent = '⏳ Membuat pesanan...';
+  try {
+    const payload = {
+      items: cart.toPayload().items,
+      promosApplied: cart.promosApplied,
+      checkinId,
+      storeUuid: cart.storeUuid,
+      storeName: cart.storeName,
+      grandTotal: cart.totals.grandTotal,
+      salesChannel: 'app',
+      paymentMethod,
+      offRouteType,
+      source: storeSource
+    };
+    const resp = await fetch('/api/orders', {
+      method: 'POST', credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await resp.json();
+    if (!data.orderUuid) {
+      btn.disabled = false;
+      btn.textContent = 'Buat Pesanan';
+      showToast('error', 'Gagal', data.error || 'Terjadi kesalahan');
+      return;
+    }
+    currentOrderUuid = data.orderUuid;
+    showSuccess(data);
+  } catch (e) {
+    btn.disabled = false;
+    btn.textContent = 'Buat Pesanan';
+    showToast('error', 'Gagal', e.message);
+  }
+}
+
+function showSuccess(data) {
+  document.getElementById('successOrderId').textContent = data.orderId || '';
+  // Generate a real QR code → buyer scans → opens the online order confirmation (invoice.html)
+  const qrBox = document.getElementById('qrBox');
+  const base = location.origin || (location.protocol + '//' + location.host);
+  const invoiceUrl = `${base}/invoice.html?uuid=${encodeURIComponent(data.orderUuid || '')}`;
+  try {
+    if (typeof QRCode !== 'undefined') {
+      qrBox.innerHTML = '';
+      // davidshimjs/qrcodejs: new QRCode(el, {text}) renders immediately
+      const qr = new QRCode(qrBox, { width: 180, height: 180, margin: 1, text: invoiceUrl });
+      qrBox.style.border = '2px solid var(--green-dark, #0a7c42)';
+    } else {
+      throw new Error('no qrcode lib');
+    }
+  } catch (e) {
+    qrBox.innerHTML = `<div style="font-size:10px;text-align:center;padding:8px;word-break:break-all;">${invoiceUrl}</div>`;
+  }
+  // Store the invoice URL for the buyer (shareable)
+  document.getElementById('successOrderId').dataset.invoiceUrl = invoiceUrl;
+  document.getElementById('successScreen').style.display = 'flex';
+  // Store order in sessionStorage for visit-card
+  sessionStorage.setItem('wim_last_order', JSON.stringify({
+    orderId: data.orderId, orderUuid: data.orderUuid, grandTotal: data.grandTotal, invoiceUrl
+  }));
+}
+
+async function verifyOrder() {
+  if (!currentOrderUuid) return;
+  const btn = document.getElementById('btnVerify');
+  btn.disabled = true;
+  btn.textContent = '⏳ Memverifikasi...';
+  try {
+    const resp = await fetch('/api/orders/verify', {
+      method: 'POST', credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ orderUuid: currentOrderUuid })
+    });
+    const data = await resp.json();
+    if (data.status === 'verified') {
+      btn.textContent = '✅ Terverifikasi!';
+      btn.style.background = 'var(--green-dark)';
+      sessionStorage.setItem('wim_last_order_verified', 'true');
+      showToast('success', 'Pesanan terverifikasi!');
+    } else {
+      btn.disabled = false;
+      btn.textContent = '📷 Verifikasi (Scan QR)';
+      showToast('error', 'Gagal', data.error || 'Verifikasi gagal');
+    }
+  } catch (e) {
+    btn.disabled = false;
+    btn.textContent = '📷 Verifikasi (Scan QR)';
+    showToast('error', 'Gagal', e.message);
+  }
+}
+
+function finishAndBack() {
+  cart.clear();
+  const store = cart.storeUuid;
+  location.href = `visit-card.html?store=${encodeURIComponent(store)}&order_created=1`;
+}
+
+// ── Promos
+async function loadPromos() {
+  try {
+    const resp = await fetch('/api/products/promos', { credentials: 'same-origin' });
+    const data = await resp.json();
+    promos = data.promos || [];
+  } catch (e) { console.error('Promos load failed:', e); }
+}
+</script>
+</body>
+</html>

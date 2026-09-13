@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WIM Admin — User Management</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f0f2f5;color:#1a1a2e;font-size:14px}
+
+/* Nav */
+.topnav{background:#1a1a2e;color:#fff;padding:0 24px;display:flex;align-items:center;height:56px;position:sticky;top:0;z-index:100}
+.topnav .brand{font-weight:700;font-size:16px;margin-right:32px}
+.topnav .brand span{color:#8e8ea0;font-weight:400}
+.topnav nav{display:flex;gap:4px;flex:1}
+.topnav nav a{color:#b0b0c8;text-decoration:none;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:500;transition:all .15s}
+.topnav nav a:hover{color:#fff;background:rgba(255,255,255,.08)}
+.topnav nav a.active{color:#fff;background:#4361ee}
+.topnav .user-info{font-size:12px;color:#8e8ea0;display:flex;align-items:center;gap:8px}
+.topnav .user-info .role-badge{background:#4361ee;padding:2px 8px;border-radius:6px;font-size:11px;color:#fff}
+.topnav .logout{color:#e63946;cursor:pointer;font-size:12px;margin-left:12px;text-decoration:none}
+
+/* Layout */
+.container{max-width:1280px;margin:0 auto;padding:24px}
+.page-title{font-size:20px;font-weight:700;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px}
+.page-title .sub{font-size:13px;color:#8e8ea0;font-weight:400}
+
+/* Toolbar */
+.toolbar{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
+.toolbar select{padding:8px 12px;border:1px solid #d0d4dc;border-radius:8px;font-size:13px;background:#fff;color:#1a1a2e;cursor:pointer;outline:none}
+.toolbar select:focus{border-color:#4361ee;box-shadow:0 0 0 2px rgba(67,97,238,.15)}
+.btn-primary{background:#4361ee;color:#fff;border:none;padding:8px 18px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;gap:6px}
+.btn-primary:hover{background:#3651d4}
+.btn-primary:disabled{opacity:.6;cursor:not-allowed}
+.btn-secondary{background:#e8f0fe;color:#4361ee;border:none;padding:8px 18px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;gap:6px}
+.btn-secondary:hover{background:#d0e0ff}
+.btn-danger{background:#fde8e8;color:#c0392b;border:none;padding:8px 18px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s}
+.btn-danger:hover{background:#f8d0d0}
+
+/* Add user form */
+.add-form{background:#fff;border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,.04);padding:20px;margin-bottom:20px;display:none}
+.add-form.open{display:block}
+.add-form h4{font-size:15px;font-weight:600;margin-bottom:14px}
+.add-form .form-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:14px}
+.add-form label{display:block;font-size:12px;font-weight:600;color:#6c6c80;margin-bottom:4px}
+.add-form input,.add-form select{width:100%;padding:8px 12px;border:1px solid #d0d4dc;border-radius:8px;font-size:13px;color:#1a1a2e;outline:none;background:#fff}
+.add-form input:focus,.add-form select:focus{border-color:#4361ee;box-shadow:0 0 0 2px rgba(67,97,238,.15)}
+.add-form .form-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:4px}
+
+/* Card */
+.card{background:#fff;border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,.04);overflow:hidden}
+.card-header{padding:16px 20px;border-bottom:1px solid #f0f2f5;display:flex;justify-content:space-between;align-items:center}
+.card-header h3{font-size:15px;font-weight:600}
+.card-body{padding:0;overflow-x:auto}
+
+/* Tables */
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{padding:10px 14px;text-align:left;font-weight:600;color:#6c6c80;font-size:11px;text-transform:uppercase;letter-spacing:.5px;background:#fafbfc;border-bottom:1px solid #eef0f4}
+td{padding:10px 14px;border-bottom:1px solid #f0f2f5}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#f8f9fc}
+
+/* Status badges */
+.status-badge{display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600}
+.status-ok{background:#d4f5e2;color:#0a7c42}
+.status-warn{background:#fff3cd;color:#856404}
+.status-miss{background:#fde8e8;color:#c0392b}
+.status-info{background:#e8f0fe;color:#4361ee}
+
+/* Loading/error */
+.loading{text-align:center;padding:40px;color:#8e8ea0}
+.error-bar{background:#fde8e8;color:#c0392b;padding:12px 20px;border-radius:8px;margin-bottom:16px;font-size:13px;display:none}
+
+/* Role badge variants */
+.role-super_admin{background:#1a1a2e;color:#fff}
+.role-head_of_sales{background:#6c5ce7;color:#fff}
+.role-regional_manager{background:#0984e3;color:#fff}
+.role-manager{background:#7c3aed;color:#fff}
+.role-depo_admin{background:#00b894;color:#fff}
+.role-sales{background:#e17055;color:#fff}
+.role-delivery{background:#0984e3;color:#fff} /* Delivery = blue w/ white text */
+
+/* Modal overlay — matches the pattern used across the admin panel (pricing/promos/stores) */
+.modal-overlay{position:fixed;inset:0;background:rgba(15,20,35,.55);display:none;align-items:center;justify-content:center;z-index:900}
+.modal-overlay[style*="display:flex"]{display:flex}
+.modal-content{background:#fff;border-radius:14px;box-shadow:0 10px 40px rgba(0,0,0,.2);max-width:480px;width:92%;max-height:85vh;display:flex;flex-direction:column;overflow:hidden}
+.modal-title{padding:16px 20px;border-bottom:1px solid #f0f2f5;font-size:15px;font-weight:700;display:flex;justify-content:space-between;align-items:center}
+.modal-body{padding:16px 20px;overflow-y:auto}
+.modal-actions{padding:14px 20px;border-top:1px solid #f0f2f5}
+</style>
+</head>
+<body data-page="users">
+<div id="appHeader"></div>
+<div class="container">
+  <div class="error-bar" id="errorBar"></div>
+
+  <div class="page-title">
+    <span>Manajemen User</span>
+    <button class="btn-primary" id="addUserBtn" onclick="toggleForm()">＋ Tambah User</button>
+  </div>
+
+  <!-- Add User Form -->
+  <div class="add-form" id="addForm">
+    <h4>Form Tambah User Baru</h4>
+    <div class="form-row">
+      <div>
+        <label for="newName">Nama Lengkap</label>
+        <input type="text" id="newName" placeholder="Nama lengkap" autocomplete="off">
+      </div>
+      <div>
+        <label for="newEmail">Email</label>
+        <input type="email" id="newEmail" placeholder="user@example.com" autocomplete="off">
+      </div>
+      <div>
+        <label for="newPassword">Password</label>
+        <input type="password" id="newPassword" placeholder="Min. 6 karakter" autocomplete="new-password">
+      </div>
+      <div>
+        <label for="newRole">Role</label>
+        <select id="newRole">
+          <option value="sales">Sales</option>
+          <option value="depo_admin">Depo Admin</option>
+          <option value="manager">Manager</option>
+          <option value="delivery">Delivery</option>
+          <option value="head_of_sales">Head of Sales</option>
+          <option value="super_admin">Super Admin</option>
+        </select>
+      </div>
+      <div>
+        <label for="newJenis">Sales Status</label>
+        <select id="newJenis">
+          <option value="">— Pilih —</option>
+          <option value="TO">TO</option>
+          <option value="SPG">SPG</option>
+          <option value="SPC">SPC</option>
+          <option value="SMD">SMD</option>
+          <option value="NA">NA</option>
+        </select>
+      </div>
+    <div>
+        <label for="newDepot">Depo</label>
+        <select id="newDepot">
+          <option value="">— Tanpa Depo —</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn-secondary" onclick="toggleForm()">Batal</button>
+      <button class="btn-primary" id="submitUserBtn" onclick="submitUser()">Simpan</button>
+    </div>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <label style="font-size:12px;font-weight:600;color:#6c6c80">Role:</label>
+    <select id="roleFilter" onchange="loadUsers()">
+      <option value="">Semua Role</option>
+      <option value="sales">Sales</option>
+      <option value="depo_admin">Depo Admin</option>
+      <option value="manager">Manager</option>
+      <option value="delivery">Delivery</option>
+      <option value="head_of_sales">Head of Sales</option>
+      <option value="super_admin">Super Admin</option>
+    </select>
+    <label style="font-size:12px;font-weight:600;color:#6c6c80">Sales Type:</label>
+    <select id="jenisFilter" onchange="loadUsers()">
+      <option value="">Semua</option>
+      <option value="TO">TO</option>
+      <option value="SPG">SPG</option>
+      <option value="SPC">SPC</option>
+      <option value="SMD">SMD</option>
+      <option value="NA">NA</option>
+    </select>
+    <label style="font-size:12px;font-weight:600;color:#6c6c80">Depo:</label>
+    <select id="depotFilter" onchange="loadUsers()">
+      <option value="">Semua Depo</option>
+    </select>
+    <label style="font-size:12px;font-weight:600;color:#6c6c80">Status:</label>
+    <select id="statusFilter" onchange="loadUsers()">
+      <option value="">Semua Status</option>
+      <option value="active">Aktif</option>
+      <option value="inactive">Nonaktif</option>
+    </select>
+    <span style="font-size:12px;color:#8e8ea0;margin-left:4px" id="userCount">-</span>
+  </div>
+
+  <!-- Users table -->
+  <div class="card">
+    <div class="card-header"><h3>🧑‍💼 Daftar User</h3></div>
+    <div class="card-body">
+      <div class="loading" id="usersLoading">Memuat...</div>
+      <table id="usersTable" style="display:none">
+        <thead><tr><th>Nama</th><th>Email</th><th>Role</th><th>Jenis Sales</th><th>Depo</th><th>Status</th></tr></thead>
+        <tbody id="usersBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- User detail / edit popup -->
+<div class="modal-overlay" id="userPopup" style="display:none" onclick="if(event.target===this)closeUserPopup()">
+  <div class="modal-content" style="max-width:480px">
+    <div class="modal-title" id="userPopupTitle">👤 Detail User</div>
+    <div class="modal-body" id="userPopupBody" style="max-height:70vh;overflow-y:auto"></div>
+    <div class="modal-actions" id="userPopupActions" style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px"></div>
+  </div>
+</div>
+
+<script>
+const ADMIN_KEY = 'wim_admin_token';
+function getToken() { return localStorage.getItem(ADMIN_KEY); }
+function showToast(msg, type) {
+  let t = document.getElementById('toast');
+  if(!t){ t = document.createElement('div'); t.className='toast'; t.id='toast'; t.style.cssText='position:fixed;top:20px;right:20px;padding:12px 20px;border-radius:8px;font-size:13px;font-weight:500;z-index:1200;display:none;box-shadow:0 4px 12px rgba(0,0,0,.12);'; document.body.appendChild(t); }
+  t.textContent = msg;
+  t.style.background = (type==='error' ? '#e63946' : '#0a7c42');
+  t.style.color = '#fff';
+  t.style.display = 'block';
+  clearTimeout(t._to);
+  t._to = setTimeout(()=>{ t.style.display='none'; }, 3500);
+}
+
+// Restore user info from session
+try {
+  const u = JSON.parse(sessionStorage.getItem('admin_user') || '{}');
+  if(document.getElementById('userName'))document.getElementById('userName').textContent= u.name || '-';
+  if(document.getElementById('userRole'))document.getElementById('userRole').textContent= u.role || '-';
+} catch(e) {}
+
+async function api(path, options) {
+  const r = await fetch(path, { credentials:'same-origin', headers:{'Accept':'application/json'}, ...options });
+  if (r.status === 401) { logout(); throw new Error('Session expired'); }
+  const d = await r.json();
+  if (!r.ok) throw new Error(d.error || 'API error');
+  return d;
+}
+
+function logout() { localStorage.removeItem(ADMIN_KEY); sessionStorage.removeItem('admin_user'); fetch('/api/admin/logout', {method:'POST',credentials:'same-origin'}).catch(()=>{}); location.href='index.html'; }
+
+function roleBadge(role) {
+  const labels = {
+    super_admin: 'Super Admin', head_of_sales: 'Head of Sales',
+    regional_manager: 'Regional Mgr', manager: 'Manager',
+    depo_admin: 'Depo Admin', sales: 'Sales', delivery: 'Delivery'
+  };
+  const cls = 'status-badge role-' + role;
+  return `<span class="${cls}">${labels[role] || role}</span>`;
+}
+
+function statusBadge(status) {
+  if (!status || status === 'active') return '<span class="status-badge status-ok">Aktif</span>';
+  if (status === 'inactive') return '<span class="status-badge status-miss">Nonaktif</span>';
+  return '<span class="status-badge status-info">' + status + '</span>';
+}
+
+let formOpen = false;
+function toggleForm() {
+  formOpen = !formOpen;
+  document.getElementById('addForm').classList.toggle('open', formOpen);
+  document.getElementById('addUserBtn').textContent = formOpen ? '✕ Batal' : '＋ Tambah User';
+  // Clear fields when closing
+  if (!formOpen) {
+    document.getElementById('newName').value = '';
+    document.getElementById('newEmail').value = '';
+    document.getElementById('newPassword').value = '';
+    document.getElementById('newRole').value = 'sales';
+    document.getElementById('newJenis').value = '';
+    document.getElementById('newDepot').value = '';
+  }
+}
+
+async function submitUser() {
+  const name = document.getElementById('newName').value.trim();
+  const email = document.getElementById('newEmail').value.trim();
+  const password = document.getElementById('newPassword').value;
+  const role = document.getElementById('newRole').value;
+  const jenis_sales = document.getElementById('newJenis').value;
+
+  if (!name || !email || !password) {
+    document.getElementById('errorBar').textContent = 'Harap isi nama, email, dan password';
+    document.getElementById('errorBar').style.display = 'block';
+    return;
+  }
+
+  const btn = document.getElementById('submitUserBtn');
+  btn.disabled = true;
+  btn.textContent = 'Menyimpan...';
+  document.getElementById('errorBar').style.display = 'none';
+
+  try {
+    const body = { name, email, password, role };
+    if (jenis_sales) body.jenis_sales = jenis_sales;
+    const depot_id = document.getElementById('newDepot').value;
+    if (depot_id) body.depot_id = depot_id;
+    await api('/api/admin/users', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
+    toggleForm();
+    await loadUsers();
+  } catch(e) {
+    document.getElementById('errorBar').textContent = 'Gagal membuat user: ' + e.message;
+    document.getElementById('errorBar').style.display = 'block';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Simpan';
+  }
+}
+
+let depots = [];
+async function loadDepots() {
+  try {
+    const d = await api('/api/admin/depots');
+    depots = d.depots || [];
+    const opts = depots.map(x => `<option value="${x.id}">${escapeHtml(x.name)}</option>`).join('');
+    document.getElementById('newDepot').innerHTML = '<option value="">— Tanpa Depo —</option>' + opts;
+    // populate filter dropdown (preserve current selection)
+    const depotFilter = document.getElementById('depotFilter');
+    const prev = depotFilter.value;
+    depotFilter.innerHTML = '<option value="">Semua Depo</option>' + opts;
+    if (prev) depotFilter.value = prev;
+  } catch(e) { /* depots optional */ }
+}
+
+function roleOptions(selected) {
+  const opts = [
+    ['sales','Sales'], ['depo_admin','Depo Admin'], ['manager','Manager'],
+    ['delivery','Delivery'], ['head_of_sales','Head of Sales'], ['super_admin','Super Admin']
+  ];
+  return opts.map(([v,l]) => `<option value="${v}" ${String(selected)===v?'selected':''}>${l}</option>`).join('');
+}
+function jenisOptions(selected) {
+  const vals = ['TO','SPG','SPC','SMD','NA'];
+  return '<option value="">— Pilih —</option>' + vals.map(v => `<option value="${v}" ${String(selected)===v?'selected':''}>${v}</option>`).join('');
+}
+
+function closeUserPopup(){ document.getElementById('userPopup').style.display='none'; }
+
+function openUserPopup(id) {
+  const u = window.__users?.find(x => x.id===id);
+  if(!u){ showToast('User tidak ditemukan','error'); return; }
+  renderUserDetail(u);
+}
+function renderUserDetail(u) {
+  document.getElementById('userPopup').style.display='flex';
+  document.getElementById('userPopupTitle').textContent = '👤 ' + (u.name||'User');
+  document.getElementById('userPopupBody').innerHTML = `<div style="margin-bottom:10px">
+    <div><b>${escapeHtml(u.name||'-')}</b></div>
+    <div style="color:#6c6c80;font-size:13px">${escapeHtml(u.email||'-')}</div>
+  </div>
+  <table style="width:100%;font-size:13px;border-collapse:collapse">
+    <tr><td style="padding:6px 8px;color:#8e8ea0">Role</td><td style="padding:6px 8px">${roleBadge(u.role)}</td></tr>
+    <tr><td style="padding:6px 8px;color:#8e8ea0">Sales Status</td><td style="padding:6px 8px">${escapeHtml(u.jenis_sales||'—')}</td></tr>
+    <tr><td style="padding:6px 8px;color:#8e8ea0">Depo</td><td style="padding:6px 8px">${escapeHtml(u.depot_name||u.depot_id||'—')}</td></tr>
+    <tr><td style="padding:6px 8px;color:#8e8ea0">Status</td><td style="padding:6px 8px">${statusBadge(u.status)}</td></tr>
+  </table>`;
+  document.getElementById('userPopupActions').innerHTML =
+    `<button class="btn-secondary" onclick="closeUserPopup()">Tutup</button>
+     <button class="btn-primary" onclick="openUserEdit(${u.id})">✏️ Edit User</button>`;
+}
+
+function openUserEdit(id) {
+  const u = window.__users?.find(x => x.id===id);
+  if(!u) return;
+  document.getElementById('userPopupTitle').textContent = '✏️ Edit User';
+  const depoOpts = '<option value="">— Tanpa Depo —</option>' +
+    (depots||[]).map(x => `<option value="${x.id}" ${String(u.depot_id)===String(x.id)?'selected':''}>${escapeHtml(x.name)}</option>`).join('');
+  const isActive = (u.status || 'active') !== 'inactive';
+  const toggleHtml = `<div style="display:flex;align-items:center;gap:10px;margin-top:12px;padding:10px 12px;border:1px solid #e0e0e8;border-radius:8px;background:#fafbfc">
+    <span style="font-size:13px;font-weight:600;color:#6c6c80">Status Akun</span>
+    <label style="display:flex;align-items:center;cursor:pointer;gap:6px;font-size:13px">
+      <input type="checkbox" id="euActive" ${isActive?'checked':''} onchange="this.nextSibling.textContent = this.checked ? 'Aktif' : 'Nonaktif'" style="width:18px;height:18px"> <span>Aktif</span>
+    </label>
+    <span style="font-size:12px;color:#8e8ea0" id="euActiveLabel"></span>
+  </div>`;
+  document.getElementById('userPopupBody').innerHTML = `
+    <div class="form-row" style="grid-template-columns:1fr 1fr;gap:10px">
+      <div><label for="euName" style="display:block;font-size:12px;font-weight:600;color:#6c6c80">Nama</label>
+        <input type="text" id="euName" value="${escapeHtml(u.name||'')}" style="width:100%;padding:7px 10px;border:1px solid #d0d5dd;border-radius:6px;font-size:13px"></div>
+      <div><label for="euEmail" style="display:block;font-size:12px;font-weight:600;color:#6c6c80">Email</label>
+        <input type="email" id="euEmail" value="${escapeHtml(u.email||'')}" style="width:100%;padding:7px 10px;border:1px solid #d0d5dd;border-radius:6px;font-size:13px"></div>
+    </div>
+    <div class="form-row" style="grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:10px">
+      <div><label style="display:block;font-size:12px;font-weight:600;color:#6c6c80">Role</label>
+        <select id="euRole" style="width:100%;padding:7px 10px;border:1px solid #d0d5dd;border-radius:6px;font-size:13px">${roleOptions(u.role)}</select></div>
+      <div><label style="display:block;font-size:12px;font-weight:600;color:#6c6c80">Sales Type</label>
+        <select id="euJenis" style="width:100%;padding:7px 10px;border:1px solid #d0d5dd;border-radius:6px;font-size:13px">${jenisOptions(u.jenis_sales)}</select></div>
+      <div><label style="display:block;font-size:12px;font-weight:600;color:#6c6c80">Depo</label>
+        <select id="euDepot" style="width:100%;padding:7px 10px;border:1px solid #d0d5dd;border-radius:6px;font-size:13px">${depoOpts}</select></div>
+    </div>
+    <div class="form-row" style="grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:10px">
+      <div><label for="euPhone" style="display:block;font-size:12px;font-weight:600;color:#6c6c80">No. HP</label>
+        <input type="text" id="euPhone" value="${escapeHtml(u.phone||'')}" style="width:100%;padding:7px 10px;border:1px solid #d0d5dd;border-radius:6px;font-size:13px"></div>
+      <div><label for="euNik" style="display:block;font-size:12px;font-weight:600;color:#6c6c80">NIK</label>
+        <input type="text" id="euNik" value="${escapeHtml(u.nik||'')}" style="width:100%;padding:7px 10px;border:1px solid #d0d5dd;border-radius:6px;font-size:13px"></div>
+      <div><label for="euNpwp" style="display:block;font-size:12px;font-weight:600;color:#6c6c80">NPWP</label>
+        <input type="text" id="euNpwp" value="${escapeHtml(u.npwp||'')}" style="width:100%;padding:7px 10px;border:1px solid #d0d5dd;border-radius:6px;font-size:13px"></div>
+    </div>
+    <div class="form-row" style="grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:10px">
+      <div><label for="euNpwpName" style="display:block;font-size:12px;font-weight:600;color:#6c6c80">Nama NPWP</label>
+        <input type="text" id="euNpwpName" value="${escapeHtml(u.npwp_name||'')}" style="width:100%;padding:7px 10px;border:1px solid #d0d5dd;border-radius:6px;font-size:13px"></div>
+      <div><label for="euKendaraan" style="display:block;font-size:12px;font-weight:600;color:#6c6c80">Kendaraan</label>
+        <input type="text" id="euKendaraan" value="${escapeHtml(u.kendaraan||'')}" style="width:100%;padding:7px 10px;border:1px solid #d0d5dd;border-radius:6px;font-size:13px"></div>
+      <div><label for="euKodePos" style="display:block;font-size:12px;font-weight:600;color:#6c6c80">Kode Pos</label>
+        <input type="text" id="euKodePos" value="${escapeHtml(u.kode_pos||'')}" style="width:100%;padding:7px 10px;border:1px solid #d0d5dd;border-radius:6px;font-size:13px"></div>
+    </div>
+    <div class="form-row" style="grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">
+      <div><label for="euKec" style="display:block;font-size:12px;font-weight:600;color:#6c6c80">Kecamatan</label>
+        <input type="text" id="euKec" value="${escapeHtml(u.kecamatan||'')}" style="width:100%;padding:7px 10px;border:1px solid #d0d5dd;border-radius:6px;font-size:13px"></div>
+      <div><label for="euKel" style="display:block;font-size:12px;font-weight:600;color:#6c6c80">Kelurahan</label>
+        <input type="text" id="euKel" value="${escapeHtml(u.kelurahan||'')}" style="width:100%;padding:7px 10px;border:1px solid #d0d5dd;border-radius:6px;font-size:13px"></div>
+    </div>
+    ${toggleHtml}`;
+  document.getElementById('euActiveLabel').textContent = isActive ? '' : ' (dengan toggle ini nonaktifkan/aktifkan akun)';
+  document.getElementById('userPopupActions').innerHTML =
+    `<button class="btn-secondary" onclick="issueResetLink(${u.id})" title="Buat link sekali-pakai untuk user mengganti password sendiri">🔗 Reset via link</button>
+     <button class="btn-secondary" onclick="promptSetPassword(${u.id})" title="Admin langsung set password baru">🔑 Set password</button>
+     <button class="btn-secondary" onclick="openUserPopup(${u.id})">← Detail</button>
+     <button class="btn-outline" onclick="closeUserPopup()">Batal</button>
+     <button class="btn-danger" onclick="deleteUser(${u.id})" style="background:#e63946;color:#fff;border:none;padding:8px 14px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">🗑 Hapus User</button>
+     <button class="btn-primary" onclick="saveUserEdit(${u.id})">💾 Simpan</button>`;
+}
+
+function salesAppOrigin() {
+  return 'https://sales.sqa.web.id';
+}
+
+async function issueResetLink(id) {
+  if(!confirm('Buat link reset password (sekali-pakai, berlaku 24 jam, membatalkan semua sesi user ini)?')) return;
+  try {
+    const d = await api('/api/admin/users/'+id+'/password/reset', { method:'POST' });
+    if(!d || !d.link) throw new Error('Link kosong');
+    const link = salesAppOrigin() + d.link;
+    prompt('Link reset (sekali pakai, 24 jam) — salin dan kirim ke user via WhatsApp:', link);
+    showToast('🔗 Link reset dibuat','success');
+  } catch(e) { showToast('❌ Gagal: '+e.message,'error'); }
+}
+
+async function promptSetPassword(id) {
+  const np = prompt('Set password baru untuk user ini (minimal 6 karakter). Sampaikan ke user via WhatsApp.');
+  if(np===null) return;
+  if(String(np).length < 6){ showToast('Password minimal 6 karakter','error'); return; }
+  try {
+    await api('/api/admin/users/'+id+'/password/set', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({new_password:np}) });
+    showToast('🔑 Password diperbarui (sesi user dibatalkan)','success');
+  } catch(e) { showToast('❌ Gagal: '+e.message,'error'); }
+}
+
+async function deleteUser(id) {
+  if(!confirm('Hapus user ini? (soft-delete, tidak bisa login lagi)')) return;
+  try {
+    await api('/api/admin/users/'+id, { method:'DELETE' });
+    showToast('🗑 User dihapus','success');
+    closeUserPopup();
+    await loadUsers();
+  } catch(e) { showToast('❌ Gagal: '+e.message,'error'); }
+}
+
+async function saveUserEdit(id) {
+  const body = {
+    name: document.getElementById('euName').value.trim(),
+    email: document.getElementById('euEmail').value.trim(),
+    role: document.getElementById('euRole').value,
+    jenis_sales: document.getElementById('euJenis').value,
+    depot_id: document.getElementById('euDepot').value || null,
+    phone: document.getElementById('euPhone').value.trim(),
+    nik: document.getElementById('euNik').value.trim(),
+    npwp: document.getElementById('euNpwp').value.trim(),
+    npwp_name: document.getElementById('euNpwpName').value.trim(),
+    kendaraan: document.getElementById('euKendaraan').value.trim(),
+    kode_pos: document.getElementById('euKodePos').value.trim(),
+    kecamatan: document.getElementById('euKec').value.trim(),
+    kelurahan: document.getElementById('euKel').value.trim(),
+    status: document.getElementById('euActive').checked ? 'active' : 'inactive',
+  };
+  if(!body.name || !body.email){ showToast('Nama dan email wajib diisi','error'); return; }
+  try {
+    await api('/api/admin/users/'+id, { method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
+    showToast('✅ User diperbarui','success');
+    closeUserPopup();
+    await loadUsers();
+  } catch(e) { showToast('❌ Gagal: '+e.message,'error'); }
+}
+
+async function loadUsers() {
+  const role = document.getElementById('roleFilter').value;
+  const jenis = document.getElementById('jenisFilter').value;
+  const depot = document.getElementById('depotFilter').value;
+  const status = document.getElementById('statusFilter').value;
+  const q = [];
+  if (role) q.push('role=' + encodeURIComponent(role));
+  if (jenis) q.push('jenis_sales=' + encodeURIComponent(jenis));
+  if (depot) q.push('depot_id=' + encodeURIComponent(depot));
+  if (status) q.push('status=' + encodeURIComponent(status));
+  const path = '/api/admin/users' + (q.length ? '?' + q.join('&') : '');
+
+  document.getElementById('usersLoading').style.display = 'block';
+  document.getElementById('usersTable').style.display = 'none';
+  document.getElementById('errorBar').style.display = 'none';
+
+  try {
+    const d = await api(path);
+    const tb = document.getElementById('usersBody');
+    const users = d.users || [];
+    window.__users = users;
+
+    document.getElementById('userCount').textContent = users.length + ' user' + (users.length !== 1 ? '' : '');
+
+    if (users.length === 0) {
+      tb.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:30px;color:#8e8ea0;font-size:14px">Tidak ada user ditemukan</td></tr>';
+    } else {
+      tb.innerHTML = users.map(u => `<tr style="cursor:pointer" onclick="openUserPopup(${u.id})" title="Klik untuk lihat/edit">
+        <td><b>${escapeHtml(u.name || '-')}</b>${u.phone ? '<br><span style="font-size:11px;color:#8e8ea0">' + escapeHtml(u.phone) + '</span>' : ''}</td>
+        <td>${escapeHtml(u.email || '-')}</td>
+        <td>${roleBadge(u.role)}</td>
+        <td style="color:#6c6c80;font-size:12px">${escapeHtml(u.jenis_sales || '-')}</td>
+        <td style="color:#6c6c80;font-size:12px">${escapeHtml(u.depot_name || u.depot_id || '—')}</td>
+        <td>${statusBadge(u.status)}</td>
+      </tr>`).join('');
+    }
+
+    document.getElementById('usersLoading').style.display = 'none';
+    document.getElementById('usersTable').style.display = '';
+  } catch(e) {
+    document.getElementById('usersLoading').textContent = 'Gagal memuat data: ' + e.message;
+    document.getElementById('errorBar').textContent = 'Gagal memuat user: ' + e.message;
+    document.getElementById('errorBar').style.display = 'block';
+  }
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+loadUsers();
+
+document.querySelectorAll('.rencana-drop').forEach(function(dd){var menu=dd.querySelector('span[style*="position:absolute"]');if(!menu)return;dd.addEventListener('mouseenter',function(){menu.style.display='block'});dd.addEventListener('mouseleave',function(){menu.style.display='none'});});
+loadDepots();
+</script>
+<div id="appFooter"></div>
+<script src="js/include.js"></script>
+</body>
+</html>

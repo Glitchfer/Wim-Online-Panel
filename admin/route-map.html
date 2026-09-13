@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WIM Admin — Rute & Maps</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f0f2f5;color:#1a1a2e;font-size:14px}
+
+/* Nav */
+.topnav{background:#1a1a2e;color:#fff;padding:0 24px;display:flex;align-items:center;height:56px;position:sticky;top:0;z-index:100}
+.topnav .brand{font-weight:700;font-size:16px;margin-right:32px}
+.topnav .brand span{color:#8e8ea0;font-weight:400}
+.topnav nav{display:flex;gap:4px;flex:1}
+.topnav nav a{color:#b0b0c8;text-decoration:none;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:500;transition:all .15s}
+.topnav nav a:hover{color:#fff;background:rgba(255,255,255,.08)}
+.topnav nav a.active{color:#fff;background:#4361ee}
+.topnav .user-info{font-size:12px;color:#8e8ea0;display:flex;align-items:center;gap:8px}
+.topnav .user-info .role-badge{background:#4361ee;padding:2px 8px;border-radius:6px;font-size:11px;color:#fff}
+.topnav .logout{color:#e63946;cursor:pointer;font-size:12px;margin-left:12px;text-decoration:none}
+
+/* Layout */
+.container{max-width:1280px;margin:0 auto;padding:24px}
+.page-title{font-size:20px;font-weight:700;margin-bottom:20px}
+.page-title .sub{font-size:13px;color:#8e8ea0;font-weight:400}
+
+/* Cards */
+.card{background:#fff;border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,.04);overflow:hidden}
+.card-header{padding:16px 20px;border-bottom:1px solid #f0f2f5;display:flex;justify-content:space-between;align-items:center}
+.card-header h3{font-size:15px;font-weight:600}
+.card-body{padding:0;overflow-x:auto}
+
+/* Status badges */
+.status-badge{display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600}
+.status-ok{background:#d4f5e2;color:#0a7c42}
+.status-warn{background:#fff3cd;color:#856404}
+.status-miss{background:#fde8e8;color:#c0392b}
+.status-info{background:#e8f0fe;color:#4361ee}
+
+/* Loading/error */
+.loading{text-align:center;padding:40px;color:#8e8ea0}
+.error-bar{background:#fde8e8;color:#c0392b;padding:12px 20px;border-radius:8px;margin-bottom:16px;font-size:13px;display:none}
+
+/* Two-column map layout */
+.map-layout{display:grid;grid-template-columns:340px 1fr;gap:14px;min-height:600px}
+@media(max-width:900px){.map-layout{grid-template-columns:1fr}}
+
+/* Route sidebar */
+.route-sidebar .filter-bar{padding:14px 16px;border-bottom:1px solid #f0f2f5}
+.route-sidebar .filter-bar select{width:100%;padding:8px 10px;border:1px solid #d0d5dd;border-radius:8px;font-size:13px;background:#fff;color:#1a1a2e}
+.route-sidebar .filter-bar select:focus{outline:none;border-color:#4361ee;box-shadow:0 0 0 2px rgba(67,97,238,.15)}
+.btn-quick{flex:1;padding:7px 10px;border:1px solid #d0d5dd;border-radius:8px;font-size:12px;background:#f0f2f5;color:#1a1a2e;cursor:pointer}
+.btn-quick:hover{background:#e2e6f0;border-color:#4361ee;color:#4361ee}
+.btn-quick.active{background:#4361ee;color:#fff;border-color:#4361ee}
+.route-stores{max-height:520px;overflow-y:auto}
+.route-store-item{padding:12px 16px;border-bottom:1px solid #f0f2f5;cursor:pointer;transition:background .1s}
+.route-store-item:hover{background:#f8f9fc}
+.route-store-item.highlighted{background:#e8f0fe;border-left:3px solid #4361ee}
+.route-store-item .store-name{font-weight:600;font-size:13px;display:flex;justify-content:space-between;align-items:center}
+.route-store-item .store-addr{font-size:11px;color:#8e8ea0;margin-top:2px}
+.route-store-item .store-rep{font-size:11px;color:#6c6c80;margin-top:2px}
+
+/* Map wrapper */
+.map-wrapper{position:relative}
+#routeMap{width:100%;height:600px;border-radius:12px;z-index:1}
+#mapLoading{position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(255,255,255,.85);display:flex;align-items:center;justify-content:center;border-radius:12px;z-index:2;font-size:14px;color:#8e8ea0}
+#mapError{position:absolute;top:0;left:0;right:0;bottom:0;background:#fde8e8;display:none;align-items:center;justify-content:center;border-radius:12px;z-index:2;font-size:14px;color:#c0392b;text-align:center;padding:24px}
+
+/* Legend */
+.map-legend{display:flex;gap:16px;padding:10px 16px;border-top:1px solid #f0f2f5;flex-wrap:wrap;font-size:12px}
+.map-legend .legend-item{display:flex;align-items:center;gap:6px;color:#6c6c80}
+.map-legend .legend-dot{width:10px;height:10px;border-radius:50%;display:inline-block}
+
+/* Empty state */
+.empty-state{text-align:center;padding:40px 20px;color:#8e8ea0}
+.empty-state .empty-icon{font-size:40px;margin-bottom:8px}
+</style>
+</head>
+<body data-page="route-map">
+
+<div id="appHeader"></div>
+<div class="container">
+  <div class="error-bar" id="errorBar"></div>
+
+  <div class="page-title">
+    🗺️ Routes &amp; Maps <span class="sub" id="todayDate"></span>
+  </div>
+
+  <div class="map-layout">
+    <!-- Sidebar: Rep filter + Store list -->
+    <div class="card route-sidebar">
+      <div class="card-header">
+        <h3>📍 Rute Sales</h3>
+        <span id="planCount" style="font-size:12px;color:#8e8ea0">0 rencana</span>
+      </div>
+      <div class="filter-bar">
+        <div style="display:flex;align-items:center;gap:8px">
+          <label for="routeDate" style="font-size:12px;color:#6c6c80;white-space:nowrap">📅 Kapan:</label>
+          <input type="date" id="routeDate" value="" onchange="loadData()" style="flex:1;padding:8px 10px;border:1px solid #d0d5dd;border-radius:8px;font-size:13px;background:#fff;color:#1a1a2e">
+        </div>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button type="button" class="btn-quick" onclick="quickDate(0)">Hari Ini</button>
+          <button type="button" class="btn-quick" onclick="quickDate(-1)">Kemarin</button>
+          <button type="button" class="btn-quick" onclick="quickDate(-2)">2 Hari Lalu</button>
+        </div>
+        <select id="repFilter" onchange="filterRep()" style="margin-top:8px">
+          <option value="all">Semua Sales</option>
+        </select>
+      </div>
+      <div class="card-body">
+        <div class="loading" id="planLoading">Memuat rencana kunjungan...</div>
+        <div id="routeStoreList" style="display:none"></div>
+      </div>
+      <div class="map-legend">
+        <span class="legend-item"><span class="legend-dot" style="background:#2eb872"></span> Dikunjungi + Order</span>
+        <span class="legend-item"><span class="legend-dot" style="background:#e63946"></span> Dikunjungi, Belum Order</span>
+        <span class="legend-item"><span class="legend-dot" style="background:#4361ee"></span> Belum Dikunjungi</span>
+        <span class="legend-item"><span class="legend-dot" style="background:#e67e22;width:4px;height:14px;border-radius:2px"></span> Rute Sales</span>
+        <span class="legend-item"><span class="legend-dot" style="background:#0a7c42;border-radius:2px;width:10px;height:10px"></span> Posisi Ake</span>
+        <span class="legend-item"><span class="legend-dot" style="background:#856404;border-radius:2px;width:10px;height:10px"></span> Check-in/out</span>
+        <span class="legend-item"><span class="legend-dot" style="background:#6c6c80;border-radius:3px;width:10px;height:12px"></span> Depo</span>
+      </div>
+    </div>
+
+    <!-- Map -->
+    <div class="card map-wrapper">
+      <div id="mapLoading">Memuat peta...</div>
+      <div id="mapError"></div>
+      <div id="routeMap"></div>
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const ADMIN_KEY = 'wim_admin_token';
+
+function getToken() { return localStorage.getItem(ADMIN_KEY); }
+
+document.getElementById('todayDate').textContent = new Date().toLocaleDateString('id-ID', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+
+// ── Date helpers ──
+function toInputDate(dt) {
+  const y = dt.getFullYear(), m = String(dt.getMonth()+1).padStart(2,'0'), dd = String(dt.getDate()).padStart(2,'0');
+  return `${y}-${m}-${dd}`;
+}
+const todayInput = toInputDate(new Date());
+document.getElementById('routeDate').value = todayInput;
+
+function quickDate(offsetDays) {
+  const d = new Date(); d.setDate(d.getDate() + offsetDays);
+  document.getElementById('routeDate').value = toInputDate(d);
+  loadData();
+}
+function fmtTitle(dateStr) {
+  try {
+    const parts = dateStr.split('-'); // YYYY-MM-DD
+    const d = new Date(parts[0], parts[1]-1, parts[2]);
+    return d.toLocaleDateString('id-ID', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+  } catch(e) { return dateStr; }
+}
+
+// Restore user info from session
+try {
+  const u = JSON.parse(sessionStorage.getItem('admin_user') || '{}');
+  if(document.getElementById('userName'))document.getElementById('userName').textContent= u.name || '-';
+  if(document.getElementById('userRole'))document.getElementById('userRole').textContent= u.role || '-';
+} catch(e) {}
+
+async function api(path) {
+  const r = await fetch(path, { credentials:'same-origin', headers:{'Accept':'application/json'} });
+  if (r.status === 401) { logout(); throw new Error('Session expired'); }
+  const d = await r.json();
+  if (!r.ok) throw new Error(d.error || 'API error');
+  return d;
+}
+
+function logout() {
+  localStorage.removeItem(ADMIN_KEY);
+  sessionStorage.removeItem('admin_user');
+  fetch('/api/admin/logout', {method:'POST',credentials:'same-origin'}).catch(()=>{});
+  location.href='index.html';
+}
+
+// ── Data ──
+let allPlans = [];
+let allStores = [];
+let travelLines = [];       // per-user ordered position fixes (polyline)
+let currentPositions = [];  // last-known position per sales
+let attendance = [];        // checkin/checkout locations
+let depots = [];            // warehouse locations
+let posMarkers = [];
+let map = null;
+let travelLineLayers = [];    // all polylines drawn on the current render
+let attendanceMarkers = [];   // check-in/out divIcons drawn on the current render
+let depotMarkers = [];        // depot divIcons drawn on the current render
+let markers = [];
+let markerCluster = {};
+
+function statusColor(status) {
+  switch(status) {
+    case 'visited':  return '#0a7c42';
+    case 'pending':  return '#4361ee';
+    case 'missed':   return '#c0392b';
+    default:        return '#856404';
+  }
+}
+
+function statusLabel(status) {
+  switch(status) {
+    case 'visited':  return '✅ Dikunjungi';
+    case 'pending':  return '⏳ Rencana';
+    case 'missed':   return '❌ Terlewat';
+    default:        return '⏺️ ' + status;
+  }
+}
+
+async function loadData() {
+  // Reset rep filter + title when date changes
+  const selRep = document.getElementById('repFilter');
+  if (selRep.value !== 'all') { selRep.value = 'all'; }
+  const selDate = document.getElementById('routeDate').value || todayInput;
+  document.getElementById('todayDate').textContent = 'Rute untuk ' + fmtTitle(selDate);
+  document.getElementById('planLoading').style.display = '';
+  document.getElementById('planLoading').textContent = 'Memuat rencana kunjungan...';
+  document.getElementById('routeStoreList').style.display = 'none';
+  try {
+    // One rich call: stores (color by visit+order), travel lines, positions, attendance, depots
+    const rm = await api('/api/admin/route-map?date=' + encodeURIComponent(selDate));
+    allStores = rm.stores || [];        // {storeName, lat/lng, visited, ordered, color, userName}
+    allPlans = rm.stores || [];         // reuse for the sidebar list + popups (has user/store)
+    travelLines = rm.travelLines || [];
+    currentPositions = rm.currentPositions || [];
+    attendance = rm.attendance || [];
+    depots = rm.depots || [];
+
+    // Populate rep filter from stores
+    const reps = [...new Set(allStores.map(p => p.userName).filter(Boolean))].sort();
+    const sel = document.getElementById('repFilter');
+    while (sel.options.length > 1) sel.remove(1);
+    reps.forEach(r => { const o = document.createElement('option'); o.value = r; o.textContent = r; sel.appendChild(o); });
+
+    const visitedCount = allStores.filter(s => s.visited).length;
+    document.getElementById('planCount').textContent = allStores.length + ' toko (' + visitedCount + ' dikunjungi)';
+
+    const hasData = allStores.length > 0 || currentPositions.length > 0 || travelLines.length > 0;
+    if (!hasData) {
+      document.getElementById('planLoading').innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div>Tidak ada data untuk hari ini</div>';
+      document.getElementById('mapLoading').style.display='';
+      document.getElementById('mapLoading').textContent = 'Tidak ada data untuk ditampilkan di peta';
+      return;
+    }
+
+    document.getElementById('planLoading').style.display = 'none';
+    document.getElementById('routeStoreList').style.display = '';
+    initMap();
+    renderAll();
+
+  } catch(e) {
+    document.getElementById('errorBar').textContent = 'Gagal memuat data: ' + e.message;
+    document.getElementById('errorBar').style.display = 'block';
+    document.getElementById('planLoading').textContent = 'Gagal memuat: ' + e.message;
+    document.getElementById('mapLoading').style.display = 'none';
+    const me = document.getElementById('mapError');
+    me.textContent = 'Gagal memuat peta: ' + e.message;
+    me.style.display = 'flex';
+  }
+}
+
+function esc(s) { return String(s==null?'':s).replace(/[&<>"']/g, function(m){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];}); }
+
+function initMap() {
+  const mapEl = document.getElementById('routeMap');
+  if (map) { map.remove(); }
+
+  // Center from the first store / depot / current position
+  const pts = [];
+  allStores.forEach(s => { if (s.latitude != null) pts.push([s.latitude, s.longitude]); });
+  currentPositions.forEach(p => { if (p.latitude != null) pts.push([p.latitude, p.longitude]); });
+  depots.forEach(d => { if (d.latitude != null) pts.push([d.latitude, d.longitude]); });
+  let center = [-6.2088, 106.8456];
+  if (pts.length) {
+    center = [pts.reduce((a,p)=>a+p[0],0)/pts.length, pts.reduce((a,p)=>a+p[1],0)/pts.length];
+  }
+
+  map = L.map(mapEl, { zoomControl: true }).setView(center, 11);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; <a href="https://openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    maxZoom: 18,
+  }).addTo(map);
+  document.getElementById('mapLoading').style.display = 'none';
+}
+
+// Filtered stores (by rep) for the map + list
+function filteredStores() {
+  const f = document.getElementById('repFilter').value;
+  return f === 'all' ? allStores : allStores.filter(s => s.userName === f);
+}
+
+function renderAll() {
+  markers.forEach(m => map.removeLayer(m));
+  markers = [];
+  markerCluster = {};
+  posMarkers.forEach(m => map.removeLayer(m));
+  posMarkers = [];
+  travelLineLayers.forEach(l => map.removeLayer(l));
+  travelLineLayers = [];
+  attendanceMarkers.forEach(m => map.removeLayer(m));
+  attendanceMarkers = [];
+  depotMarkers.forEach(m => map.removeLayer(m));
+  depotMarkers = [];
+
+  const list = filteredStores();
+  const f = document.getElementById('repFilter').value;
+
+  // Travel lines (per user) — orange polyline through the logged app-opened positions
+  travelLines.forEach(tl => {
+    if (f !== 'all' && tl.userName !== f) return;
+    const coords = (tl.points || []).filter(p => p.latitude != null).map(p => [p.latitude, p.longitude]);
+    if (coords.length < 2) return;
+    const line = L.polyline(coords, { color: '#e67e22', weight: 3, opacity: 0.8 });
+    line.addTo(map);
+    travelLineLayers.push(line);
+  });
+
+  // Current / last-known position icon (green pulsing dot) per rep
+  currentPositions.forEach(cp => {
+    if (f !== 'all' && cp.userName !== f) return;
+    if (cp.latitude == null) return;
+    const mk = L.marker([cp.latitude, cp.longitude], {
+      title: cp.userName,
+      icon: L.divIcon({ html: `<div style="width:18px;height:18px;background:#0a7c42;border:3px solid #fff;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,.35)"></div>`, iconSize: [18,18], iconAnchor: [9,9], popupAnchor: [0,-10] })
+    }).addTo(map).bindPopup(`<b>${esc(cp.userName || 'Sales')}</b><br><span style="font-size:11px;color:#6c6c80">📍 Posisi ake (buka app) · ${esc(cp.recordedAt || '')}</span>`);
+    posMarkers.push(mk);
+  });
+
+  // Attendance check-in/out icons (amber house/clock)
+  attendance.forEach(a => {
+    if (f !== 'all' && a.userName !== f) return;
+    const html = `<div style="width:16px;height:16px;background:#856404;border:3px solid #fff;border-radius:3px;box-shadow:0 1px 4px rgba(0,0,0,.3)">🕐</div>`;
+    const mk = L.marker([a.latitude, a.longitude], {
+      icon: L.divIcon({ html, iconSize: [16,16], iconAnchor: [8,8], popupAnchor: [0,-10] })
+    }).addTo(map).bindPopup(`<b>${esc(a.userName || '')}</b><br><span style="font-size:11px">Check-in ${esc(a.clockIn || '-')} · Check-out ${esc(a.clockOut || '-')}</span>`);
+    attendanceMarkers.push(mk);
+  });
+
+  // Store markers: green visited&ordered / red visited no order / blue unvisited
+  list.forEach((s, i) => {
+    if (s.latitude == null) return;
+    const icon = L.divIcon({
+      className: '',
+      html: `<div style="width:26px;height:26px;border-radius:7px;background:${s.color};border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.25);display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff;font-weight:700">${i + 1}</div>`,
+      iconSize: [26, 26], iconAnchor: [13, 13], popupAnchor: [0, -15]
+    });
+    const stLabel = s.visited ? (s.ordered ? '✅ Dikunjungi + Order' : '🔴 Dikunjungi, no order') : '🔵 Belum Dikunjungi';
+    const marker = L.marker([s.latitude, s.longitude], { icon })
+      .addTo(map)
+      .bindPopup(`<b>${esc(s.storeName)}</b><br><span style="font-size:12px;color:#6c6c80">${esc(s.userName)}</span><br><span style="font-size:11px">${esc(s.address || '')}</span><br><span class="status-badge" style="background:#eef1f6;color:#1a1a2e">${stLabel}</span>`, { className: 'leaflet-popup-custom' });
+    marker._planId = i;
+    markers.push(marker);
+    markerCluster[i] = marker;
+  });
+
+  // Depot warehouse icons (grey house)
+  depots.forEach(d => {
+    const html = `<div style="width:20px;height:22px;background:#6c6c80;border:2px solid #fff;border-radius:3px;box-shadow:0 1px 4px rgba(0,0,0,.3);display:flex;align-items:center;justify-content:center;font-size:12px">🏭</div>`;
+    const mk = L.marker([d.latitude, d.longitude], {
+      icon: L.divIcon({ html, iconSize: [20,22], iconAnchor: [10,11], popupAnchor: [0,-12] })
+    }).addTo(map).bindPopup(`<b>🏭 ${esc(d.name || 'Depo')}</b>`);
+    depotMarkers.push(mk);
+  });
+
+  // Fit bounds
+  const all = [...markers, ...posMarkers, ...depotMarkers];
+  if (all.length) {
+    const g = L.featureGroup(all);
+    map.fitBounds(g.getBounds().pad(0.15));
+  }
+
+  // Sidebar store list
+  const listEl = document.getElementById('routeStoreList');
+  if (list.length === 0) {
+    listEl.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div>Tidak ada toko untuk sales ini</div>';
+  } else {
+    listEl.innerHTML = list.map((s, i) => {
+      const badge = s.visited ? (s.ordered ? '✓' : '🔴') : '🔵';
+      return `<div class="route-store-item" onclick="focusMarker(${i})">
+        <div class="store-name">${esc(s.storeName)} <span class="status-badge" style="font-size:10px;background:#eef1f6;color:#1a1a2e">${badge}</span></div>
+        <div class="store-addr">${esc(s.address || 'Alamat tidak tersedia')}</div>
+        <div class="store-rep">👤 ${esc(s.userName)}</div>
+      </div>`;
+    }).join('');
+  }
+}
+
+function filterRep() { renderAll(); }
+
+function focusMarker(i) {
+  const marker = markerCluster[i];
+  if (marker) { map.setView(marker.getLatLng(), 14); marker.openPopup(); }
+  document.querySelectorAll('.route-store-item').forEach(el => el.classList.remove('highlighted'));
+  const item = document.querySelectorAll('.route-store-item')[i];
+  if (item) item.classList.add('highlighted');
+}
+
+loadData();
+
+document.querySelectorAll('.rencana-drop').forEach(function(dd){var menu=dd.querySelector('span[style*="position:absolute"]');if(!menu)return;dd.addEventListener('mouseenter',function(){menu.style.display='block'});dd.addEventListener('mouseleave',function(){menu.style.display='none'});});
+</script>
+<div id="appFooter"></div>
+<script src="js/include.js"></script>
+</body>
+</html>
